@@ -1,6 +1,8 @@
 import pyaudio
 import pyautogui
 import wave
+import subprocess
+# import os
 
 
 
@@ -39,12 +41,12 @@ cmd = """
 Commands:
 -| /start
 
--| /micro_recording
+-| /screenshot
 
 -| /execute_command
 
--| /screen_recording
+-| /micro_recording
 
--| /screenshot
+-| /screen_recording
 
 """

