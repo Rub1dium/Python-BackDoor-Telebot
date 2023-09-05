@@ -5,9 +5,8 @@ from telebot import types
 import pyaudio
 import wave
 import os
-import socket
 
-API_TOKEN = "6466690541:AAFfFWUqEbEzZfIOuybgrqHot_hJYBiI-eI"
+API_TOKEN = "<token>"
 ADMIN = 804011643
 
 bot = TeleBot(API_TOKEN)
