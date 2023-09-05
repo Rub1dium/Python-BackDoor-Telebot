@@ -7,7 +7,7 @@ import wave
 import os
 
 API_TOKEN = "<token>"
-ADMIN = 804011643
+ADMIN = <Your_id>
 
 bot = TeleBot(API_TOKEN)
 
