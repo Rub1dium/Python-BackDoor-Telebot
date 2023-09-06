@@ -8,8 +8,8 @@ import os
 import pickle
 
 # Variables
-API_TOKEN = "6485700500:AAGLgS_85x46iZhxcZIxk8mKNtAUdfhaAvU"
-ADMIN = 804011643
+API_TOKEN = "<token>"
+ADMIN = <id>
 
 filename_audio = "recorded_audio.wav"
 filename_video = "recorded_video.avi"
