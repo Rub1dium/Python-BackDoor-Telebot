@@ -4,11 +4,12 @@ import pyautogui
 import moviepy.editor as moviepy
 import os
 
+filename_video = "output.avi"
 
 SREEN_SIZE = (1920, 1080)
 fourcc = cv2.VideoWriter_fourcc(*"XVID")
 
-out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=10.0, frameSize=(SREEN_SIZE))
+out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(SREEN_SIZE))
 
 while True:
     img = pyautogui.screenshot()
@@ -30,4 +31,4 @@ clip.write_videofile("recorded.mp4", logger=None)
 if os.path.isfile(filename_video):
     os.remove(filename_video)
 else:
-    print('Path is not a file')
+    ...

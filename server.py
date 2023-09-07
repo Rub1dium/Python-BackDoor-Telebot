@@ -44,3 +44,4 @@ while True:
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     cv2.imshow('Window', frame)
     cv2.waitKey(10)
+
