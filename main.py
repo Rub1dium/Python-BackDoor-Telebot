@@ -19,11 +19,9 @@ import moviepy.editor as moviepy
 
 # Variables
 
-# API_TOKEN = "6652240740:AAFWOW8p2xrv1rPlX8emG9iB_dE1l3o9bJY" # Yretra3
-# API_TOKEN = "6330536047:AAH618gGp8RiCjNCUO4YDBxRgTKl5zICBL4" # Yretra2
-# API_TOKEN = "6433586121:AAFtw6FK9PyPY5UbhtW-VtuGCFbuCh9y7Uk" # Yretra1
-API_TOKEN = "6595505598:AAEqCuUCGfxVbVlu9_HVKFRXG1ULL7PeJGE" # TEST
-ADMIN = 804011643
+
+API_TOKEN = "token" # TEST
+ADMIN = <id>
 
 filename_audio = "recorded_audio.wav"
 filename_video = "video1.avi"
