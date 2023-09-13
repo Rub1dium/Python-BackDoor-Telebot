@@ -12,11 +12,11 @@ height = windll.user32.GetSystemMetrics(1)
 filename_video = "video1.avi"
 
 
-SREEN_SIZE = (width, height)
+SREEN_SIZE = (1920, 1080)
 fourcc = cv2.VideoWriter_fourcc(*"XVID")
 
 while True:
-    stop_time = round(time.time()) + 60
+    stop_time = round(time.time()) + 70
     
     while os.path.exists(filename_video):
         index = filename_video[5:-4]
