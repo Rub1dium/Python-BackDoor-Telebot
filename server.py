@@ -5,6 +5,8 @@ import struct
 from colorama import Fore
 from os import system, path
 
+
+""" Variables """
 g = Fore.LIGHTGREEN_EX
 r = Fore.LIGHTRED_EX
 m = Fore.LIGHTMAGENTA_EX
@@ -17,6 +19,7 @@ minus = r + "[-] " + w
 mul = m + "[*] " + w
 dol = y + "[$] " + w
 
+""" Functional """
 class Server:
     def __init__(self):
         self.HOST = socket.gethostbyname(socket.gethostname())
@@ -82,6 +85,8 @@ class Server:
         cv2.destroyAllWindows()
         self.conn.close()
 
+
+""" Start """
 server = Server()
 server.build()
 server.getscreen()
