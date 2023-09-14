@@ -18,7 +18,7 @@ from PIL import Image
 
 
 """ Variables """
-API_TOKEN = "token"
+API_TOKEN = ""
 ADMIN_ID = id
 bot = TeleBot(API_TOKEN)
 
@@ -240,11 +240,11 @@ class Client:
             while True:
                 stop_time = round(time.time()) + 70
 
-                while os.path.exists(filename_video):
+                while os.path.exists(self.filename_video):
                     index = filename_video[5:-4]
                     filename_video = filename_video[:-5] + str(int(index) + 1) + ".avi"
 
-                out = cv2.VideoWriter(filename=filename_video, fourcc=self.ffourcc, fps=15.0, frameSize=(self.SREEN_SIZE))
+                out = cv2.VideoWriter(filename=self.filename_video, fourcc=self.ffourcc, fps=15.0, frameSize=(self.SREEN_SIZE))
 
                 while True:
                     if round(time.time()) == stop_time:
