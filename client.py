@@ -18,7 +18,7 @@ from PIL import Image
 
 
 """ Variables """
-API_TOKEN = ""
+API_TOKEN = "token"
 ADMIN_ID = id
 bot = TeleBot(API_TOKEN)
 
