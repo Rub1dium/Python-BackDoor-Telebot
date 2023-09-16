@@ -5,6 +5,12 @@ import struct
 from colorama import Fore
 from os import system, path
 
+from vidstream import StreamingServer
+
+
+server = StreamingServer('127.0.0.1', 9999)
+server.start_server()
+
 
 """ Variables """
 g = Fore.LIGHTGREEN_EX
@@ -30,7 +36,7 @@ class Server:
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.bind(("", self.PORT))
-            self.sock.listen(20)
+            self.sock.listen(5)
 
             print(f'{plus}Socket created')
             print(f'{plus}Socket bind complete\n')
@@ -47,43 +53,39 @@ class Server:
         print(f"{dol}Connected - {wl}{self.addr[0]}")
     
     def getscreen(self):
-        RECV_SIZE = 33554432
-        SCREEN_SIZE = (1440, 900)
-        filename_video = "video1.avi"
-        data = b''
-        payload_size = struct.calcsize("L")
-
-        while path.exists(filename_video):
-            index = filename_video[5:-4]
-            filename_video = filename_video[:-5] + str(int(index) + 1) + ".avi"
-
-        fourcc = cv2.VideoWriter_fourcc(*"XVID")
-        out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(SCREEN_SIZE))
+        payload_size = struct.calcsize('>L')
+        data = b""
 
         while True:
+            break_loop = False
             while len(data) < payload_size:
-                data += self.conn.recv(RECV_SIZE)
-            packed_msg_size = data[:payload_size]
+                received = self.conn.recv(4096)
+                if received == b'':
+                    self.conn.close()
+                    break_loop = True
+                    break
+                data += received
 
+            if break_loop:
+                break
+
+            packed_msg_size = data[:payload_size]
             data = data[payload_size:]
-            msg_size = struct.unpack("L", packed_msg_size)[0]
+
+            msg_size = struct.unpack(">L", packed_msg_size)[0]
 
             while len(data) < msg_size:
-                data += self.conn.recv(RECV_SIZE)
+                data += self.conn.recv(4096)
+
             frame_data = data[:msg_size]
             data = data[msg_size:]
 
-            frame = pickle.loads(frame_data)
-
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            out.write(frame)
-            cv2.imshow('Window', frame)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
+            frame = pickle.loads(frame_data, fix_imports=True, encoding="bytes")
+            frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
+            cv2.imshow(str(self.addr), frame)
+            if cv2.waitKey(1) == ord("q"):
+                cv2.destroyAllWindows()
                 break
-
-        cv2.destroyAllWindows()
-        self.conn.close()
 
 
 """ Start """
