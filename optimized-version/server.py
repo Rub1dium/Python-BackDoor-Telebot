@@ -4,18 +4,22 @@ import pickle
 import struct
 import cv2
 
-from colorama import Fore
-from os import system, path
 from threading import Thread
+from os import system, path
 from ctypes  import windll
+from colorama import Fore
 
 
 """ Functional """
 class Server:
     def __init__(self):
-        self.HOST = socket.gethostbyname(socket.gethostname())
-        self.PORT = int(input(f"ENTER PORT: "))
-        system("cls")
+        try:
+            self.HOST = socket.gethostbyname(socket.gethostname())
+            self.PORT = int(input(f"Enter port: "))
+            system("cls")
+        except ValueError:
+            print(f"\n{r}Введено не число!{w}")
+            Server.__init__(self)
 
     def build(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -126,4 +130,4 @@ while True:
         server.get_screen()
         print(f"{minus}Disconnect")
     except Exception as e:
-        print(e)
+        print(f"{r}{e}\n{w}")

