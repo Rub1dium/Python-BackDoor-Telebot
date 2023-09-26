@@ -40,6 +40,11 @@ class Server:
         self.__running_micro = True
         thr = Thread(target=self.get_micro).start()
         
+        fourcc = cv2.VideoWriter_fourcc(*"XVID")
+        filename_video = "video1.avi"
+        out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(1280, 768))
+        
+        
         payload_size = struct.calcsize('>L')
         data = b""
         while True:
@@ -68,10 +73,14 @@ class Server:
 
             frame = pickle.loads(frame_data, fix_imports=True, encoding="bytes")
             frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
+            
+            out.write(frame)
             cv2.imshow(str(self.addr), frame)
+            
             if cv2.waitKey(1) == ord("q"):
                 self.__running_micro = False
                 cv2.destroyAllWindows()
+                out.release()
                 break
 
     def get_micro(self):

