@@ -378,12 +378,9 @@ class Client:
 
 
 """ Variables """
-API_TOKEN = "6669917733:AAE77ceLu3WIEcwORpqBFQiS3X7Ol-BSCmo" # Для тестов
-# API_TOKEN = "6541278450:AAG3juT44yFShG7nuhfO4R--ySmQqi0avdg" # Последний пк в кб. информатики
-# API_TOKEN = "6635956918:AAHSuBMziJz8mnjdY9VSIB01nfLJxncRuCw" # FREE
+API_TOKEN = "token"
 
-ADMIN_ID = 804011643
-MISHA = 1712857832
+ADMIN_ID = id
 
 bot = TeleBot(API_TOKEN)
 
@@ -398,7 +395,6 @@ markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
 """ Start """
 client = Client()
 bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
-# bot.send_message(MISHA, "ONLINE ✅", reply_markup=markup)
 
 
 @bot.message_handler(commands=["_start"])
