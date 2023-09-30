@@ -2,6 +2,7 @@ import pyaudio
 import socket
 import pickle
 import struct
+import wave
 import cv2
 
 from threading import Thread
@@ -22,9 +23,9 @@ class Server:
             Server.__init__(self)
 
     def build(self):
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.bind(("", self.PORT))
-        self.client_socket.listen(5)
+        self.client_socket_v = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket_v.bind(("", self.PORT))
+        self.client_socket_v.listen(1)
 
         print(f'{plus}{wl}Socket created')
         print(f'{plus}{wl}Socket bind complete\n')
@@ -33,24 +34,24 @@ class Server:
     def sock_accept(self):
         print(f'{sharp}{wl}Socket now listening 🎲\n')
 
-        self.conn, self.addr = self.client_socket.accept()
+        self.conn, self.addr = self.client_socket_v.accept()
         print(f"{plus}{wl}Connected - {r}{self.addr[0]} ({self.addr[1]})\n\n{wl}")
 
     def get_screen(self):
         self.__running_micro = True
         thr = Thread(target=self.get_micro).start()
-        
+
         fourcc = cv2.VideoWriter_fourcc(*"XVID")
-        filename_video = "video1.avi"
-        out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=15.0, frameSize=(1280, 768))
-        
-        
+        filename_video = f"{self.addr[0]}_record_video.avi"
+        out = cv2.VideoWriter(filename=filename_video, fourcc=fourcc, fps=12.0, frameSize=(1280, 768))
+
         payload_size = struct.calcsize('>L')
         data = b""
+        
         while True:
             break_loop = False
             while len(data) < payload_size:
-                received = self.conn.recv(4096)
+                received = self.conn.recv(16384)
                 if received == b'':
                     self.conn.close()
                     break_loop = True
@@ -66,7 +67,7 @@ class Server:
             msg_size = struct.unpack(">L", packed_msg_size)[0]
 
             while len(data) < msg_size:
-                data += self.conn.recv(4096)
+                data += self.conn.recv(16384)
 
             frame_data = data[:msg_size]
             data = data[msg_size:]
@@ -101,19 +102,33 @@ class Server:
 
         server_socket_m = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket_m.bind(("", PORT))
-        server_socket_m.listen(5)
+        server_socket_m.listen(1)
         conn, addr = server_socket_m.accept()
         
+        frames = []
         while self.__running_micro:
             try:
                 data = conn.recv(32768)
-                # if data == b"":
-                #     continue
-                stream.write(data,chunk)
+                stream.write(data, chunk)
+                frames.append(data)
+                
+                with open('dump_record_microphone.dat', 'wb') as dump_rm:
+                    pickle.dump(frames, dump_rm, protocol=3)
             except:
                 self.__running_micro = False
+        
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        
+        wf = wave.open(f"{self.addr[0]}_record_microphone.wav", "wb")
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b"".join(frames))
+        wf.close()
 
-        server_socket_m.close()
+        conn.close()
 
 
 """ Variables """
